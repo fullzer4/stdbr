@@ -1,4 +1,8 @@
+mod cep;
+mod cnpj;
 mod cpf;
+mod municipio;
+pub(crate) mod uf;
 
 use core::ffi::{CStr, c_char};
 use std::ffi::CString;

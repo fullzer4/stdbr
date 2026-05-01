@@ -1,0 +1,61 @@
+name: IBGE Sync Check
+
+on:
+  schedule:
+    # Runs daily at 06:00 UTC
+    - cron: "0 6 * * *"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ibge-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-ibge-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Fetch latest IBGE data
+        run: |
+          curl -sf -o core/tests/data/ibge_municipios_$(date +%Y-%m-%d).json \
+            "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome"
+
+      - name: Run IBGE sync tests
+        run: cargo test -p stdbr-core --test municipio_ibge_sync
+
+      - name: Open issue if out of sync
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `IBGE municipality data out of sync (${new Date().toISOString().split('T')[0]})`;
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'ibge-sync',
+            });
+            if (existing.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body: [
+                  '## IBGE municipality data is out of sync',
+                  '',
+                  'The daily sync check detected differences between `core/src/municipio.rs` and the live IBGE API.',
+                  '',
+                  `Workflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                ].join('\n'),
+                labels: ['ibge-sync'],
+              });
+            }
