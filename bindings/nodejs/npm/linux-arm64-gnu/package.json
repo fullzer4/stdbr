@@ -1,0 +1,12 @@
+{
+  "name": "@stdbr/stdbr-linux-arm64-gnu",
+  "version": "0.0.1",
+  "os": ["linux"],
+  "cpu": ["arm64"],
+  "libc": ["glibc"],
+  "main": "stdbr.linux-arm64-gnu.node",
+  "license": "MIT OR Apache-2.0",
+  "engines": {
+    "node": ">= 10"
+  }
+}

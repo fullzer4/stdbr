@@ -1,0 +1,11 @@
+{
+  "name": "@stdbr/stdbr-darwin-arm64",
+  "version": "0.0.1",
+  "os": ["darwin"],
+  "cpu": ["arm64"],
+  "main": "stdbr.darwin-arm64.node",
+  "license": "MIT OR Apache-2.0",
+  "engines": {
+    "node": ">= 10"
+  }
+}

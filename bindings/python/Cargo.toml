@@ -1,0 +1,17 @@
+[package]
+name = "stdbr-python"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "stdbr"
+crate-type = ["cdylib"]
+
+[dependencies]
+stdbr-core = { path = "../../core" }
+pyo3 = { version = "0.24", features = ["extension-module", "abi3-py39"] }
+
+[lints]
+workspace = true

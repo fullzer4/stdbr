@@ -1,0 +1,38 @@
+load("@rules_rust//rust:defs.bzl", "rust_shared_library", "rust_static_library")
+load("//tools/rules_rust_extras:cbindgen.bzl", "cbindgen")
+
+exports_files(["Cargo.toml"])
+
+rust_shared_library(
+    name = "stdbr-ffi-shared",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = ["//core:stdbr-core"],
+    visibility = ["//visibility:public"],
+)
+
+rust_static_library(
+    name = "stdbr-ffi-static",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = ["//core:stdbr-core"],
+    visibility = ["//visibility:public"],
+)
+
+cbindgen(
+    name = "stdbr-header",
+    srcs = glob(["src/**/*.rs"]),
+    config = "cbindgen.toml",
+    crate_name = "stdbr-ffi",
+    header_name = "stdbr.h",
+    lockfile = "//:Cargo.lock",
+    manifest = "//:Cargo.toml",
+    workspace_srcs = [
+        "//core:Cargo.toml",
+        ":Cargo.toml",
+    ] + glob(["src/**/*.rs"]) + [
+        "//core:src/lib.rs",
+        "//core:src/cpf.rs",
+    ],
+    visibility = ["//visibility:public"],
+)

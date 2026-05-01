@@ -1,0 +1,20 @@
+[package]
+name = "stdbr-napi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+stdbr-core = { path = "../../core" }
+napi = { version = "2", features = ["napi9"] }
+napi-derive = "2"
+
+[build-dependencies]
+napi-build = "2"
+
+[lints]
+workspace = true

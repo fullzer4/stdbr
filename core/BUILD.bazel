@@ -1,0 +1,20 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+exports_files([
+    "Cargo.toml",
+    "src/lib.rs",
+    "src/cpf.rs",
+])
+
+rust_library(
+    name = "stdbr-core",
+    srcs = glob(["src/**/*.rs"]),
+    crate_features = ["std"],
+    crate_root = "src/lib.rs",
+    visibility = ["//visibility:public"],
+)
+
+rust_test(
+    name = "stdbr-core-test",
+    crate = ":stdbr-core",
+)

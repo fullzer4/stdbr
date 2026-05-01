@@ -1,0 +1,15 @@
+[package]
+name = "stdbr-ffi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+stdbr-core = { path = "../../core" }
+
+[lints]
+workspace = true

@@ -1,0 +1,11 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "stdbr"
+requires-python = ">=3.9"
+dynamic = ["version"]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]

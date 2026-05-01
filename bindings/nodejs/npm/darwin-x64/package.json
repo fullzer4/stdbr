@@ -1,0 +1,11 @@
+{
+  "name": "@stdbr/stdbr-darwin-x64",
+  "version": "0.0.1",
+  "os": ["darwin"],
+  "cpu": ["x64"],
+  "main": "stdbr.darwin-x64.node",
+  "license": "MIT OR Apache-2.0",
+  "engines": {
+    "node": ">= 10"
+  }
+}
