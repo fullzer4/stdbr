@@ -9,13 +9,20 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
 
 use stdbr_core::municipio;
 use stdbr_core::uf::State;
 
-/// Finds the most recent IBGE JSON file in tests/data/.
+const IBGE_URL: &str =
+    "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome";
+
+/// Finds the most recent IBGE JSON file in tests/data/, downloading from the
+/// IBGE API if none exists.
 fn find_ibge_json() -> PathBuf {
     let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data");
+    fs::create_dir_all(&data_dir).expect("failed to create tests/data/");
+
     let mut files: Vec<_> = fs::read_dir(&data_dir)
         .expect("tests/data/ directory must exist")
         .filter_map(|e| e.ok())
@@ -26,10 +33,34 @@ fn find_ibge_json() -> PathBuf {
         })
         .collect();
     files.sort_by_key(|e| e.file_name());
-    files
-        .last()
-        .unwrap_or_else(|| panic!("No ibge_municipios_*.json found in {}", data_dir.display()))
-        .path()
+
+    if let Some(entry) = files.last() {
+        return entry.path();
+    }
+
+    // No cached file — fetch from IBGE API
+    let today = chrono_free_date();
+    let dest = data_dir.join(format!("ibge_municipios_{today}.json"));
+    let status = Command::new("curl")
+        .args(["-sf", "-o"])
+        .arg(&dest)
+        .arg(IBGE_URL)
+        .status()
+        .expect("failed to run curl — is it installed?");
+    assert!(status.success(), "curl failed to fetch IBGE data");
+    dest
+}
+
+/// Returns today's date as `YYYY-MM-DD` without pulling in the `chrono` crate.
+fn chrono_free_date() -> String {
+    let output = Command::new("date")
+        .arg("+%Y-%m-%d")
+        .output()
+        .expect("failed to run `date`");
+    String::from_utf8(output.stdout)
+        .expect("invalid UTF-8 from date")
+        .trim()
+        .to_string()
 }
 
 fn state_from_sigla(sigla: &str) -> State {
