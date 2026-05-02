@@ -1,3 +1,4 @@
 .direnv
 /bazel-*
 /target
+core/tests/data/

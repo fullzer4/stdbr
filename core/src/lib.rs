@@ -6,4 +6,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
 
+mod rand;
+pub(crate) mod util;
+
+pub mod cep;
+pub mod cnpj;
 pub mod cpf;
+pub mod municipio;
+pub mod uf;

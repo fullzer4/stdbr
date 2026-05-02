@@ -1,0 +1,5 @@
+# napi-derive proc macros require build-time state (type_def.json)
+# that only exists during `napi build`, causing expansion failures
+# in rust-analyzer's proc-macro server.
+[procMacro]
+ignored = { "napi_derive" = ["napi"] }

@@ -6,6 +6,9 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use core::fmt;
 
+use crate::rand::{simple_seed, xorshift64};
+use crate::util::{self, impl_document_traits};
+
 const CPF_LEN: usize = 11;
 const WEIGHTS_D1: [u32; 9] = [10, 9, 8, 7, 6, 5, 4, 3, 2];
 const WEIGHTS_D2: [u32; 10] = [11, 10, 9, 8, 7, 6, 5, 4, 3, 2];
@@ -115,25 +118,7 @@ impl fmt::Display for Cpf {
     }
 }
 
-impl fmt::Debug for Cpf {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Cpf({self})")
-    }
-}
-
-impl AsRef<str> for Cpf {
-    fn as_ref(&self) -> &str {
-        self.as_str()
-    }
-}
-
-impl core::str::FromStr for Cpf {
-    type Err = CpfError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        parse_strict(s)
-    }
-}
+impl_document_traits!(Cpf, CpfError);
 
 pub fn remove_symbols(cpf: &str) -> String {
     cpf.chars().filter(char::is_ascii_digit).collect()
@@ -211,7 +196,7 @@ pub fn compute_check_digits(base: &str) -> Option<(u8, u8)> {
 }
 
 fn all_equal(digits: &[u8]) -> bool {
-    digits.iter().all(|&v| v == digits[0])
+    util::all_equal(digits)
 }
 
 fn validate_digits(d: &[u8]) -> bool {
@@ -289,29 +274,6 @@ fn generate_with_seed(mut seed: u64) -> Cpf {
 
     append_check_digits(&mut digits);
     Cpf::from_numeric(digits)
-}
-
-#[cfg(feature = "std")]
-fn simple_seed() -> u64 {
-    use std::hash::{BuildHasher, Hasher};
-    std::collections::hash_map::RandomState::new()
-        .build_hasher()
-        .finish()
-}
-
-#[cfg(not(feature = "std"))]
-fn simple_seed() -> u64 {
-    let stack_var: u8 = 0;
-    let addr = &stack_var as *const u8 as u64;
-    addr.wrapping_mul(6_364_136_223_846_793_005)
-        .wrapping_add(1_442_695_040_888_963_407)
-}
-
-fn xorshift64(mut state: u64) -> u64 {
-    state ^= state << 13;
-    state ^= state >> 7;
-    state ^= state << 17;
-    state
 }
 
 #[cfg(test)]
