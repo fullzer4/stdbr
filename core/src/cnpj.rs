@@ -115,12 +115,7 @@ impl Cnpj {
     /// Masked: `XX.XXX.XXX/****-**`.
     pub fn masked(&self) -> String {
         let s = self.as_str();
-        alloc::format!(
-            "{}.{}.{}/****-**",
-            &s[0..2],
-            &s[2..5],
-            &s[5..8]
-        )
+        alloc::format!("{}.{}.{}/****-**", &s[0..2], &s[2..5], &s[5..8])
     }
 }
 
@@ -157,7 +152,10 @@ pub fn is_valid(cnpj: &str) -> bool {
     }
     let bytes = raw.as_bytes();
     // Positions 0-11 must be alphanumeric uppercase, 12-13 must be digits
-    if !bytes[..12].iter().all(|&b| b.is_ascii_uppercase() || b.is_ascii_digit()) {
+    if !bytes[..12]
+        .iter()
+        .all(|&b| b.is_ascii_uppercase() || b.is_ascii_digit())
+    {
         return false;
     }
     if !bytes[12..14].iter().all(u8::is_ascii_digit) {
@@ -178,7 +176,10 @@ pub fn format_cnpj(cnpj: &str) -> Option<String> {
         return None;
     }
     let bytes = raw.as_bytes();
-    if !bytes[..12].iter().all(|&b| b.is_ascii_uppercase() || b.is_ascii_digit()) {
+    if !bytes[..12]
+        .iter()
+        .all(|&b| b.is_ascii_uppercase() || b.is_ascii_digit())
+    {
         return None;
     }
     if !bytes[12..14].iter().all(u8::is_ascii_digit) {
@@ -217,7 +218,10 @@ pub fn compute_check_digits(base: &str) -> Option<(u8, u8)> {
         return None;
     }
     let bytes = raw.as_bytes();
-    if !bytes.iter().all(|&b| b.is_ascii_uppercase() || b.is_ascii_digit()) {
+    if !bytes
+        .iter()
+        .all(|&b| b.is_ascii_uppercase() || b.is_ascii_digit())
+    {
         return None;
     }
     if all_equal(bytes) {
@@ -284,7 +288,10 @@ fn parse_strict(s: &str) -> Result<Cnpj, CnpjError> {
     let chars: Vec<u8> = match raw.len() {
         14 => {
             // Positions 0-11: alphanumeric uppercase, 12-13: digits
-            if !raw[..12].iter().all(|&b| b.is_ascii_uppercase() || b.is_ascii_digit()) {
+            if !raw[..12]
+                .iter()
+                .all(|&b| b.is_ascii_uppercase() || b.is_ascii_digit())
+            {
                 return Err(CnpjError::InvalidCharacter);
             }
             if !raw[12..14].iter().all(u8::is_ascii_digit) {
@@ -298,7 +305,10 @@ fn parse_strict(s: &str) -> Result<Cnpj, CnpjError> {
                 return Err(CnpjError::InvalidFormat);
             }
             let extracted: Vec<u8> = FORMATTED_CHAR_POS.iter().map(|&i| raw[i]).collect();
-            if !extracted[..12].iter().all(|&b| b.is_ascii_uppercase() || b.is_ascii_digit()) {
+            if !extracted[..12]
+                .iter()
+                .all(|&b| b.is_ascii_uppercase() || b.is_ascii_digit())
+            {
                 return Err(CnpjError::InvalidCharacter);
             }
             if !extracted[12..14].iter().all(u8::is_ascii_digit) {
@@ -371,7 +381,6 @@ fn generate_with_ordem(mut seed: u64, kind: CnpjKind, ordem: [u8; 4]) -> Cnpj {
     append_check_digits(&mut bytes);
     Cnpj { bytes }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -583,7 +592,10 @@ mod tests {
 
     #[test]
     fn accessor_establishment_type() {
-        assert_eq!(cnpj_numeric().establishment_type(), EstablishmentType::Matriz);
+        assert_eq!(
+            cnpj_numeric().establishment_type(),
+            EstablishmentType::Matriz
+        );
         // Build one with ordem != "0001"
         let filial = make_cnpj(b"112223330002");
         assert_eq!(filial.establishment_type(), EstablishmentType::Filial);

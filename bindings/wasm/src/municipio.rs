@@ -1,5 +1,5 @@
-use wasm_bindgen::prelude::*;
 use stdbr_core::municipio as core_mun;
+use wasm_bindgen::prelude::*;
 
 use crate::uf::State;
 
@@ -47,7 +47,9 @@ impl MunicipioList {
     #[wasm_bindgen(getter)]
     pub fn count(&self) -> u32 {
         #[allow(clippy::cast_possible_truncation)]
-        { self.items.len() as u32 }
+        {
+            self.items.len() as u32
+        }
     }
 
     /// Get a municipality by index. Returns `undefined` if out of bounds.

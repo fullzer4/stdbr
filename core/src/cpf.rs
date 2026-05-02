@@ -276,7 +276,6 @@ fn generate_with_seed(mut seed: u64) -> Cpf {
     Cpf::from_numeric(digits)
 }
 
-
 #[cfg(test)]
 fn make_cpf(base: [u8; 9]) -> Cpf {
     let mut digits = [0u8; CPF_LEN];

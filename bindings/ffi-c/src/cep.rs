@@ -157,10 +157,7 @@ pub unsafe extern "C" fn stdbr_cep_postal_region(cep: *const StdbrCep) -> StdbrP
 /// Returns the state. Writes the result to `*out` and returns `true`.
 /// Returns `false` if the CEP doesn't map to a known state.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn stdbr_cep_state(
-    cep: *const StdbrCep,
-    out: *mut StdbrState,
-) -> bool {
+pub unsafe extern "C" fn stdbr_cep_state(cep: *const StdbrCep, out: *mut StdbrState) -> bool {
     if cep.is_null() || out.is_null() {
         return false;
     }

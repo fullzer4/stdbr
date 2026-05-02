@@ -1,5 +1,5 @@
-use wasm_bindgen::prelude::*;
 use stdbr_core::uf as core_uf;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 #[derive(Clone, Copy, PartialEq, Eq)]

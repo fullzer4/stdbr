@@ -17,17 +17,18 @@ pub struct StdbrMunicipioList {
 /// Caller frees with `stdbr_municipio_destroy`.
 #[unsafe(no_mangle)]
 pub extern "C" fn stdbr_municipio_from_ibge_code(code: u32) -> *mut StdbrMunicipio {
-    core_mun::Municipio::from_ibge_code(code)
-        .map_or(ptr::null_mut(), |m| Box::into_raw(Box::new(StdbrMunicipio(m))))
+    core_mun::Municipio::from_ibge_code(code).map_or(ptr::null_mut(), |m| {
+        Box::into_raw(Box::new(StdbrMunicipio(m)))
+    })
 }
 
 /// Get the capital of a given state.
 /// Caller frees with `stdbr_municipio_destroy`.
 #[unsafe(no_mangle)]
 pub extern "C" fn stdbr_municipio_capital_of(state: StdbrState) -> *mut StdbrMunicipio {
-    Box::into_raw(Box::new(StdbrMunicipio(
-        core_mun::Municipio::capital_of(state.into_core()),
-    )))
+    Box::into_raw(Box::new(StdbrMunicipio(core_mun::Municipio::capital_of(
+        state.into_core(),
+    ))))
 }
 
 /// Destroys a municipio handle. `NULL`-safe.
@@ -116,7 +117,9 @@ pub unsafe extern "C" fn stdbr_municipio_list_count(list: *const StdbrMunicipioL
         return 0;
     }
     #[allow(clippy::cast_possible_truncation)]
-    { unsafe { &*list }.items.len() as u32 }
+    {
+        unsafe { &*list }.items.len() as u32
+    }
 }
 
 /// Returns a municipio from the list at the given index.
@@ -133,7 +136,9 @@ pub unsafe extern "C" fn stdbr_municipio_list_get(
     unsafe { &*list }
         .items
         .get(index as usize)
-        .map_or(ptr::null_mut(), |m| Box::into_raw(Box::new(StdbrMunicipio(m))))
+        .map_or(ptr::null_mut(), |m| {
+            Box::into_raw(Box::new(StdbrMunicipio(m)))
+        })
 }
 
 /// Destroys a municipio list. `NULL`-safe.

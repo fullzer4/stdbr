@@ -33,8 +33,7 @@ fn find_ibge_json() -> PathBuf {
 }
 
 fn state_from_sigla(sigla: &str) -> State {
-    State::from_abbreviation(sigla)
-        .unwrap_or_else(|| panic!("Unknown state abbreviation: {sigla}"))
+    State::from_abbreviation(sigla).unwrap_or_else(|| panic!("Unknown state abbreviation: {sigla}"))
 }
 
 #[derive(Debug)]

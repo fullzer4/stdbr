@@ -173,11 +173,7 @@ pub unsafe extern "C" fn stdbr_cnpj_establishment_type(
 
 /// Writes the two check digits to `*d1` and `*d2`.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn stdbr_cnpj_check_digits(
-    cnpj: *const StdbrCnpj,
-    d1: *mut u8,
-    d2: *mut u8,
-) {
+pub unsafe extern "C" fn stdbr_cnpj_check_digits(cnpj: *const StdbrCnpj, d1: *mut u8, d2: *mut u8) {
     if cnpj.is_null() || d1.is_null() || d2.is_null() {
         return;
     }

@@ -369,18 +369,12 @@ mod tests {
 
     #[test]
     fn strict_rejects_misplaced_separators() {
-        assert_eq!(
-            is_valid_strict("0131-0100"),
-            Err(CepError::InvalidFormat)
-        );
+        assert_eq!(is_valid_strict("0131-0100"), Err(CepError::InvalidFormat));
     }
 
     #[test]
     fn strict_rejects_letters() {
-        assert_eq!(
-            is_valid_strict("abcdefgh"),
-            Err(CepError::InvalidCharacter)
-        );
+        assert_eq!(is_valid_strict("abcdefgh"), Err(CepError::InvalidCharacter));
     }
 
     #[test]

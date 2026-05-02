@@ -1,5 +1,5 @@
-use wasm_bindgen::prelude::*;
 use stdbr_core::cep as core_cep;
+use wasm_bindgen::prelude::*;
 
 use crate::uf::State;
 

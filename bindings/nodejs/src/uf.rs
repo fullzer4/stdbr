@@ -73,11 +73,33 @@ impl From<State> for core_uf::State {
 impl From<core_uf::State> for State {
     fn from(s: core_uf::State) -> Self {
         const STATES: [State; 27] = [
-            State::AC, State::AL, State::AM, State::AP, State::BA, State::CE,
-            State::DF, State::ES, State::GO, State::MA, State::MG, State::MS,
-            State::MT, State::PA, State::PB, State::PE, State::PI, State::PR,
-            State::RJ, State::RN, State::RO, State::RR, State::RS, State::SC,
-            State::SE, State::SP, State::TO,
+            State::AC,
+            State::AL,
+            State::AM,
+            State::AP,
+            State::BA,
+            State::CE,
+            State::DF,
+            State::ES,
+            State::GO,
+            State::MA,
+            State::MG,
+            State::MS,
+            State::MT,
+            State::PA,
+            State::PB,
+            State::PE,
+            State::PI,
+            State::PR,
+            State::RJ,
+            State::RN,
+            State::RO,
+            State::RR,
+            State::RS,
+            State::SC,
+            State::SE,
+            State::SP,
+            State::TO,
         ];
         STATES[s as u8 as usize]
     }

@@ -1,0 +1,7 @@
+{
+  "rust-analyzer.procMacro.ignored": {
+    "napi_derive": ["napi"]
+  },
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.cargo.features": "all"
+}
