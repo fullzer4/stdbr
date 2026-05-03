@@ -96,7 +96,7 @@
                 category = "bazel";
               }
               {
-                name = "test";
+                name = "check";
                 command = "bazel test //...";
                 help = "Run all tests";
                 category = "bazel";
