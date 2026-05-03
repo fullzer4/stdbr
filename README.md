@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/fullzer4/stdbr/actions/workflows/ci.yml/badge.svg)](https://github.com/fullzer4/stdbr/actions/workflows/ci.yml)
 [![IBGE Sync](https://github.com/fullzer4/stdbr/actions/workflows/ibge-sync.yml/badge.svg)](https://github.com/fullzer4/stdbr/actions/workflows/ibge-sync.yml)
-[![License: Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 Standard library for Brazil.
 
