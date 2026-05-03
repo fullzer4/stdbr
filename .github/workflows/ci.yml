@@ -17,17 +17,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cargo fmt
-        run: nix develop --command cargo fmt --all -- --check
+        run: cargo fmt --all -- --check
 
       - name: Clippy
-        run: nix develop --command cargo clippy --workspace -- -D warnings
+        run: cargo clippy --workspace -- -D warnings
 
       - name: Tests
-        run: nix develop --command cargo test --workspace
+        run: cargo test --workspace
 
   build-bindings:
     name: Build Bindings
@@ -36,20 +45,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build core
-        run: nix develop --command cargo build -p stdbr-core
+        run: cargo build -p stdbr-core
 
       - name: Build ffi-c
-        run: nix develop --command cargo build -p stdbr-ffi
+        run: cargo build -p stdbr-ffi
 
       - name: Build nodejs
-        run: nix develop --command cargo build -p stdbr-napi
+        run: cargo build -p stdbr-napi
 
       - name: Build python
-        run: nix develop --command cargo build -p stdbr-python
+        run: cargo build -p stdbr-python
 
       - name: Build wasm
-        run: nix develop --command cargo build -p stdbr-wasm --target wasm32-unknown-unknown
+        run: cargo build -p stdbr-wasm --target wasm32-unknown-unknown

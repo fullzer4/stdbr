@@ -1,1 +1,1 @@
-exports_files(["Cargo.toml"])
+exports_files(["Cargo.toml", "test_parity.js"] + glob(["src/**/*.rs"]))

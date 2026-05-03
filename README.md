@@ -1,27 +1,21 @@
 # stdbr
 
-> **Work in progress** - this project is under active development.
+[![CI](https://github.com/fullzer4/stdbr/actions/workflows/ci.yml/badge.svg)](https://github.com/fullzer4/stdbr/actions/workflows/ci.yml)
+[![IBGE Sync](https://github.com/fullzer4/stdbr/actions/workflows/ibge-sync.yml/badge.svg)](https://github.com/fullzer4/stdbr/actions/workflows/ibge-sync.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
 
-Standard library for Brazil. A single Rust codebase with `no_std` compatible core and bindings for Node.js, Python, WebAssembly and C.
+Standard library for Brazil.
 
-Currently implements **CPF** (Cadastro de Pessoas Fisicas): validation, formatting, masking and generation using the modulo-11 algorithm specified by Receita Federal. More modules (CNPJ, CEP, etc.) are planned.
+One Rust codebase (`no_std` + `alloc`), five modules, four binding targets. Same behavior everywhere.
 
-## How it works
-
-Everything starts from `stdbr-core`, a `no_std` Rust library that implements the actual logic. Each binding wraps the core directly, so the behavior is identical across every platform. One implementation, one test suite, every language.
-
-## Bindings
-
-| Language | Crate / Package | Mechanism |
-|----------|----------------|-----------|
-| Rust | `stdbr-core` | Direct dependency |
+| Target | Package | Via |
+|--------|---------|-----|
+| Rust | `stdbr-core` | direct |
 | Node.js | `@stdbr/stdbr` | napi-rs |
-| Python | `stdbr` | PyO3 + maturin |
-| WebAssembly | `@stdbr/wasm` | wasm-bindgen |
-| C / C++ | `stdbr-ffi` | FFI + cbindgen |
-
-Full API documentation will live on a dedicated docs site.
+| Python | `stdbr` | PyO3 |
+| WASM | `@stdbr/wasm` | wasm-bindgen |
+| C/C++ | `stdbr-ffi` | `extern "C"` |
 
 ## License
 
-MIT OR Apache-2.0
+Apache-2.0

@@ -1,7 +1,7 @@
 load("@rules_rust//rust:defs.bzl", "rust_shared_library", "rust_static_library")
 load("//tools/rules_rust_extras:cbindgen.bzl", "cbindgen")
 
-exports_files(["Cargo.toml"])
+exports_files(["Cargo.toml", "test_parity.c"])
 
 rust_shared_library(
     name = "stdbr-ffi-shared",
@@ -30,9 +30,22 @@ cbindgen(
     workspace_srcs = [
         "//core:Cargo.toml",
         ":Cargo.toml",
-    ] + glob(["src/**/*.rs"]) + [
+        "//bindings/nodejs:Cargo.toml",
+        "//bindings/python:Cargo.toml",
+        "//bindings/wasm:Cargo.toml",
+        "//tools/parity_gen:Cargo.toml",
         "//core:src/lib.rs",
         "//core:src/cpf.rs",
-    ],
+        "//core:src/cnpj.rs",
+        "//core:src/cep.rs",
+        "//core:src/uf.rs",
+        "//core:src/municipio.rs",
+        "//core:src/rand.rs",
+        "//core:src/util.rs",
+        "//bindings/nodejs:src/lib.rs",
+        "//bindings/python:src/lib.rs",
+        "//bindings/wasm:src/lib.rs",
+        "//tools/parity_gen:src/main.rs",
+    ] + glob(["src/**/*.rs"]),
     visibility = ["//visibility:public"],
 )

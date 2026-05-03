@@ -12,11 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache cargo
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -24,13 +22,11 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-ibge-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Fetch latest IBGE data
-        run: |
-          curl -sf -o core/tests/data/ibge_municipios_$(date +%Y-%m-%d).json \
-            "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome"
+      - name: Generate golden.json (fetches IBGE data from API)
+        run: cargo run -p parity-gen > tests/parity/golden.json
 
-      - name: Run IBGE sync tests
-        run: cargo test -p stdbr-core --test municipio_ibge_sync
+      - name: Run parity tests (includes IBGE sync validation)
+        run: cargo test -p stdbr-core --test parity
 
       - name: Open issue if out of sync
         if: failure()

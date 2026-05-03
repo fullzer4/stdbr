@@ -1,8 +1,9 @@
 common --enable_bzlmod
 test --test_output=errors
+test --test_env=HOME
+test --test_env=USER
 build --action_env=CC
 build --action_env=PATH
 
-# Release profile
 build:release -c opt
 build:release --@rules_rust//:extra_rustc_flags=-Cstrip=symbols,-Cpanic=abort,-Ccodegen-units=1,-Copt-level=z

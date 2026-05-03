@@ -1,0 +1,123 @@
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+genrule(
+    name = "gen_golden",
+    outs = ["golden_generated.json"],
+    cmd = "$(location //tools/parity_gen) > $@",
+    tools = ["//tools/parity_gen"],
+    tags = ["no-sandbox", "local", "requires-network"],
+)
+
+rust_test(
+    name = "parity_rust",
+    srcs = ["//core:tests/parity.rs"],
+    deps = ["//core:stdbr-core", "@crates//:serde_json"],
+    data = [":gen_golden"],
+    env = {"GOLDEN_JSON": "$(rootpath :gen_golden)"},
+)
+
+genrule(
+    name = "build_nodejs",
+    srcs = ["//:Cargo.toml"],
+    outs = ["nodejs_built.stamp"],
+    cmd = "WS=$$(dirname $$(readlink -f $(location //:Cargo.toml))) && " +
+          "cd $$WS && cargo build -p stdbr-napi --release >&2 && touch $@",
+    tags = ["no-sandbox", "local"],
+)
+
+write_file(
+    name = "gen_nodejs_runner",
+    out = "run_nodejs.sh",
+    content = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        'WS=$(dirname "$(readlink -f "$TEST_SRCDIR/_main/Cargo.toml")")',
+        'export GOLDEN_JSON="$TEST_SRCDIR/_main/$GOLDEN_JSON"',
+        'exec node --test "$WS/bindings/nodejs/test_parity.js"',
+    ],
+    is_executable = True,
+)
+
+sh_test(
+    name = "parity_nodejs",
+    srcs = [":gen_nodejs_runner"],
+    data = [":gen_golden", ":build_nodejs", "//bindings/nodejs:test_parity.js", "//:Cargo.toml"],
+    env = {"GOLDEN_JSON": "$(rootpath :gen_golden)"},
+    tags = ["no-sandbox", "local"],
+)
+
+genrule(
+    name = "build_python",
+    srcs = ["//:Cargo.toml"],
+    outs = ["python_built.stamp"],
+    cmd = "WS=$$(dirname $$(readlink -f $(location //:Cargo.toml))) && " +
+          "cd $$WS && maturin develop --manifest-path bindings/python/Cargo.toml --release >&2 && touch $@",
+    tags = ["no-sandbox", "local"],
+)
+
+write_file(
+    name = "gen_python_runner",
+    out = "run_python.sh",
+    content = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        'WS=$(dirname "$(readlink -f "$TEST_SRCDIR/_main/Cargo.toml")")',
+        'export GOLDEN_JSON="$TEST_SRCDIR/_main/$GOLDEN_JSON"',
+        'source "$WS/.venv/bin/activate"',
+        'exec python3 "$WS/bindings/python/test_parity.py"',
+    ],
+    is_executable = True,
+)
+
+sh_test(
+    name = "parity_python",
+    srcs = [":gen_python_runner"],
+    data = [":gen_golden", ":build_python", "//bindings/python:test_parity.py", "//:Cargo.toml"],
+    env = {"GOLDEN_JSON": "$(rootpath :gen_golden)"},
+    tags = ["no-sandbox", "local"],
+)
+
+cc_test(
+    name = "parity_ffi_c",
+    srcs = ["//bindings/ffi-c:test_parity.c"],
+    deps = [
+        "//bindings/ffi-c:stdbr-ffi-static",
+        "//bindings/ffi-c:stdbr-header",
+        "@cjson",
+    ],
+    data = [":gen_golden"],
+    env = {"GOLDEN_JSON": "$(rootpath :gen_golden)"},
+    tags = ["no-sandbox", "local"],
+)
+
+genrule(
+    name = "build_wasm",
+    srcs = ["//:Cargo.toml"],
+    outs = ["wasm_built.stamp"],
+    cmd = "WS=$$(dirname $$(readlink -f $(location //:Cargo.toml))) && " +
+          "cd $$WS && wasm-pack build bindings/wasm --target nodejs --release >&2 && touch $@",
+    tags = ["no-sandbox", "local"],
+)
+
+write_file(
+    name = "gen_wasm_runner",
+    out = "run_wasm.sh",
+    content = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        'WS=$(dirname "$(readlink -f "$TEST_SRCDIR/_main/Cargo.toml")")',
+        'export GOLDEN_JSON="$TEST_SRCDIR/_main/$GOLDEN_JSON"',
+        'export WASM_PKG="$WS/bindings/wasm/pkg/stdbr_wasm.js"',
+        'exec node --test "$WS/bindings/wasm/test_parity.js"',
+    ],
+    is_executable = True,
+)
+
+sh_test(
+    name = "parity_wasm",
+    srcs = [":gen_wasm_runner"],
+    data = [":gen_golden", ":build_wasm", "//bindings/wasm:test_parity.js", "//:Cargo.toml"],
+    env = {"GOLDEN_JSON": "$(rootpath :gen_golden)"},
+    tags = ["no-sandbox", "local"],
+)

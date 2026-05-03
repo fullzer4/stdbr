@@ -1,6 +1,7 @@
 module(name = "stdbr", version = "0.0.1")
 
 bazel_dep(name = "rules_rust", version = "0.70.0")
+bazel_dep(name = "rules_python", version = "1.6.3")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 bazel_dep(name = "platforms", version = "1.0.0")
 
@@ -20,6 +21,10 @@ crate.from_cargo(
         "//bindings/nodejs:Cargo.toml",
         "//bindings/python:Cargo.toml",
         "//bindings/wasm:Cargo.toml",
+        "//tools/parity_gen:Cargo.toml",
     ],
 )
 use_repo(crate, "crates")
+
+cjson = use_extension("//tools:cjson_ext.bzl", "cjson")
+use_repo(cjson, "cjson")

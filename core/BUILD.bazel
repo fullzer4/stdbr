@@ -2,9 +2,8 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files([
     "Cargo.toml",
-    "src/lib.rs",
-    "src/cpf.rs",
-])
+    "tests/parity.rs",
+] + glob(["src/**/*.rs"]))
 
 rust_library(
     name = "stdbr-core",
