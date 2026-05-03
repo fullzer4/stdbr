@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["core", "bindings/ffi-c", "bindings/nodejs", "bindings/python", "bindings/wasm"]
+members = ["core", "bindings/ffi-c", "bindings/nodejs", "bindings/python", "bindings/wasm", "tools/parity_gen"]
 
 [workspace.package]
 version = "0.0.1"

@@ -1,0 +1,10 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+exports_files(["Cargo.toml"] + glob(["src/**/*.rs"]))
+
+rust_binary(
+    name = "parity_gen",
+    srcs = ["src/main.rs"],
+    deps = ["//core:stdbr-core", "@crates//:serde_json", "@crates//:ureq"],
+    visibility = ["//tests/parity:__pkg__"],
+)

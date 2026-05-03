@@ -1,5 +1,3 @@
-"""Custom rule to generate C header files using cbindgen."""
-
 def _cbindgen_impl(ctx):
     output = ctx.actions.declare_file(ctx.attr.header_name)
 
@@ -36,6 +34,7 @@ def _cbindgen_impl(ctx):
         CcInfo(
             compilation_context = cc_common.create_compilation_context(
                 headers = depset([output]),
+                system_includes = depset([output.dirname]),
             ),
         ),
     ]
