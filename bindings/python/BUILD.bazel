@@ -1,1 +1,19 @@
+load("@rules_rust//rust:defs.bzl", "rust_shared_library")
+
 exports_files(["Cargo.toml", "test_parity.py"] + glob(["src/**/*.rs"]))
+
+rust_shared_library(
+    name = "stdbr-python",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = ["//core:stdbr-core", "@crates//:pyo3"],
+    visibility = ["//visibility:public"],
+)
+
+genrule(
+    name = "stdbr-pymodule",
+    srcs = [":stdbr-python"],
+    outs = ["stdbr.abi3.so"],
+    cmd = "cp $< $@",
+    visibility = ["//visibility:public"],
+)

@@ -1,7 +1,12 @@
 import json
 import os
+import sys
 import unittest
 from pathlib import Path
+
+_pymodule = os.environ.get("STDBR_PYMODULE")
+if _pymodule:
+    sys.path.insert(0, str(Path(_pymodule).resolve().parent))
 
 import stdbr
 
