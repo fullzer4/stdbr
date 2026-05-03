@@ -27984,9 +27984,7 @@ mod tests {
             assert!(
                 (a.state as u8) < (b.state as u8)
                     || ((a.state as u8) == (b.state as u8) && a.name <= b.name),
-                "{} should come before {}",
-                a,
-                b
+                "{a} should come before {b}"
             );
         }
     }
@@ -27995,7 +27993,7 @@ mod tests {
     fn each_state_has_municipalities() {
         for &state in &crate::uf::ALL {
             let munis = Municipio::by_state(state);
-            assert!(!munis.is_empty(), "{:?} has no municipalities", state);
+            assert!(!munis.is_empty(), "{state:?} has no municipalities");
         }
     }
 
@@ -28004,8 +28002,7 @@ mod tests {
         for &code in &CAPITAL_CODES {
             assert!(
                 Municipio::from_ibge_code(code).is_some(),
-                "Capital code {} not found",
-                code
+                "Capital code {code} not found"
             );
         }
     }
@@ -28021,7 +28018,7 @@ mod tests {
 
     #[test]
     fn from_ibge_code_sao_paulo() {
-        let sp = Municipio::from_ibge_code(3550308).unwrap();
+        let sp = Municipio::from_ibge_code(3_550_308).unwrap();
         assert_eq!(sp.name, "São Paulo");
         assert_eq!(sp.state, State::SP);
     }
@@ -28029,7 +28026,7 @@ mod tests {
     #[test]
     fn from_ibge_code_returns_none() {
         assert!(Municipio::from_ibge_code(0).is_none());
-        assert!(Municipio::from_ibge_code(9999999).is_none());
+        assert!(Municipio::from_ibge_code(9_999_999).is_none());
     }
 
     #[test]
@@ -28050,18 +28047,18 @@ mod tests {
 
     #[test]
     fn is_capital_correct() {
-        let sp = Municipio::from_ibge_code(3550308).unwrap();
+        let sp = Municipio::from_ibge_code(3_550_308).unwrap();
         assert!(sp.is_capital());
 
         // Campinas is not a capital
-        let campinas = Municipio::from_ibge_code(3509502).unwrap();
+        let campinas = Municipio::from_ibge_code(3_509_502).unwrap();
         assert!(!campinas.is_capital());
     }
 
     #[test]
     fn display_format() {
         use alloc::string::ToString;
-        let sp = Municipio::from_ibge_code(3550308).unwrap();
+        let sp = Municipio::from_ibge_code(3_550_308).unwrap();
         assert_eq!(sp.to_string(), "São Paulo/SP");
     }
 

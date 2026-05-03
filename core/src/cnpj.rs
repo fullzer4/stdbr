@@ -770,7 +770,7 @@ mod tests {
         let result = is_valid("00623904000173");
         // It's valid only if check digits match - let's compute
         if let Some((d1, d2)) = compute_check_digits("006239040001") {
-            let cnpj_str = alloc::format!("006239040001{}{}", d1, d2);
+            let cnpj_str = alloc::format!("006239040001{d1}{d2}");
             assert!(is_valid(&cnpj_str));
             let cnpj: Cnpj = cnpj_str.parse().unwrap();
             assert!(cnpj.as_str().starts_with("00"));

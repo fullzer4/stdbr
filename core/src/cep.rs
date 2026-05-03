@@ -313,8 +313,8 @@ mod tests {
 
     #[test]
     fn is_valid_accepts_valid_formatted() {
-        assert!(is_valid(&cep_sp().to_string()));
-        assert!(is_valid(&cep_rj().to_string()));
+        assert!(is_valid(cep_sp().as_ref()));
+        assert!(is_valid(cep_rj().as_ref()));
     }
 
     #[test]
@@ -349,8 +349,8 @@ mod tests {
 
     #[test]
     fn strict_accepts_valid_formatted() {
-        assert!(is_valid_strict(&cep_sp().to_string()).is_ok());
-        assert!(is_valid_strict(&cep_rj().to_string()).is_ok());
+        assert!(is_valid_strict(cep_sp().as_ref()).is_ok());
+        assert!(is_valid_strict(cep_rj().as_ref()).is_ok());
     }
 
     #[test]
@@ -543,9 +543,7 @@ mod tests {
                 assert_eq!(
                     cep.state(),
                     Some(state),
-                    "CEP {} should map to {:?}",
-                    cep,
-                    state
+                    "CEP {cep} should map to {state:?}"
                 );
             }
         }
