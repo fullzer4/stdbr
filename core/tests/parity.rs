@@ -8,10 +8,10 @@ use std::collections::HashMap;
 use stdbr_core::{cep, cnpj, cpf, municipio, uf};
 
 fn golden() -> Value {
-    let path = std::env::var("GOLDEN_JSON")
-        .unwrap_or_else(|_| "tests/parity/golden.json".to_string());
-    let json = std::fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("failed to read {path}: {e}"));
+    let path =
+        std::env::var("GOLDEN_JSON").unwrap_or_else(|_| "tests/parity/golden.json".to_string());
+    let json =
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("failed to read {path}: {e}"));
     serde_json::from_str(&json).expect("failed to parse golden.json")
 }
 
