@@ -2,9 +2,8 @@ name: IBGE Sync Check
 
 on:
   schedule:
-    # Runs daily at 06:00 UTC
     - cron: "0 6 * * *"
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   ibge-sync:
@@ -12,21 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: DeterminateSystems/nix-installer-action@main
 
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-ibge-${{ hashFiles('**/Cargo.lock') }}
+      - uses: DeterminateSystems/magic-nix-cache-action@main
 
-      - name: Generate golden.json (fetches IBGE data from API)
-        run: cargo run -p parity-gen > tests/parity/golden.json
-
-      - name: Run parity tests (includes IBGE sync validation)
-        run: cargo test -p stdbr-core --test parity
+      - name: IBGE sync test
+        run: nix develop --command bazel test //tests/parity:parity_rust
 
       - name: Open issue if out of sync
         if: failure()

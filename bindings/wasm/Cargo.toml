@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 stdbr-core = { path = "../../core" }
-wasm-bindgen = "0.2"
+wasm-bindgen = "=0.2.105"
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false

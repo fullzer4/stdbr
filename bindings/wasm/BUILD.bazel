@@ -1,1 +1,20 @@
+load("@rules_rust//rust:defs.bzl", "rust_shared_library")
+load("@rules_rust_wasm_bindgen//:defs.bzl", "rust_wasm_bindgen")
+
 exports_files(["Cargo.toml", "test_parity.js"] + glob(["src/**/*.rs"]))
+
+rust_shared_library(
+    name = "stdbr-wasm-cdylib",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = ["//core:stdbr-core", "@crates//:wasm-bindgen"],
+    platform = "@rules_rust//rust/platform:wasm",
+    visibility = ["//visibility:public"],
+)
+
+rust_wasm_bindgen(
+    name = "stdbr-wasm",
+    wasm_file = ":stdbr-wasm-cdylib",
+    target = "nodejs",
+    visibility = ["//visibility:public"],
+)

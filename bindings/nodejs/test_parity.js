@@ -10,7 +10,7 @@ const goldenPath = process.env.GOLDEN_JSON || join(__dirname, "../../tests/parit
 const golden = JSON.parse(readFileSync(goldenPath, "utf8"));
 
 const require = createRequire(import.meta.url);
-const stdbr = require("./stdbr.node");
+const stdbr = require(process.env.STDBR_NODE || join(__dirname, "stdbr.node"));
 const {
   Cpf, cpfIsValid, cpfIsValidStrict, cpfFormat, cpfRemoveSymbols,
   cpfGenerate, cpfComputeCheckDigits,

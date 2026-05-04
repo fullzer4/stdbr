@@ -11,61 +11,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
-    name: Check & Test
+  bazel:
+    name: Build & Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
+      - uses: DeterminateSystems/nix-installer-action@main
 
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: DeterminateSystems/magic-nix-cache-action@main
 
-      - name: Cargo fmt
-        run: cargo fmt --all -- --check
-
-      - name: Clippy
-        run: cargo clippy --workspace -- -D warnings
-
-      - name: Tests
-        run: cargo test --workspace
-
-  build-bindings:
-    name: Build Bindings
-    runs-on: ubuntu-latest
-    needs: check
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build core
-        run: cargo build -p stdbr-core
-
-      - name: Build ffi-c
-        run: cargo build -p stdbr-ffi
-
-      - name: Build nodejs
-        run: cargo build -p stdbr-napi
-
-      - name: Build python
-        run: cargo build -p stdbr-python
-
-      - name: Build wasm
-        run: cargo build -p stdbr-wasm --target wasm32-unknown-unknown
+      - name: Build & Test
+        run: nix develop --command bazel test //...

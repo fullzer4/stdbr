@@ -1,5 +1,7 @@
-load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_rust//rust:defs.bzl", "rust_test")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+
+GOLDEN_ENV = {"GOLDEN_JSON": "$(rootpath :gen_golden)"}
 
 genrule(
     name = "gen_golden",
@@ -14,68 +16,7 @@ rust_test(
     srcs = ["//core:tests/parity.rs"],
     deps = ["//core:stdbr-core", "@crates//:serde_json"],
     data = [":gen_golden"],
-    env = {"GOLDEN_JSON": "$(rootpath :gen_golden)"},
-)
-
-genrule(
-    name = "build_nodejs",
-    srcs = ["//:Cargo.toml"],
-    outs = ["nodejs_built.stamp"],
-    cmd = "WS=$$(dirname $$(readlink -f $(location //:Cargo.toml))) && " +
-          "cd $$WS && cargo build -p stdbr-napi --release >&2 && touch $@",
-    tags = ["no-sandbox", "local"],
-)
-
-write_file(
-    name = "gen_nodejs_runner",
-    out = "run_nodejs.sh",
-    content = [
-        "#!/usr/bin/env bash",
-        "set -euo pipefail",
-        'WS=$(dirname "$(readlink -f "$TEST_SRCDIR/_main/Cargo.toml")")',
-        'export GOLDEN_JSON="$TEST_SRCDIR/_main/$GOLDEN_JSON"',
-        'exec node --test "$WS/bindings/nodejs/test_parity.js"',
-    ],
-    is_executable = True,
-)
-
-sh_test(
-    name = "parity_nodejs",
-    srcs = [":gen_nodejs_runner"],
-    data = [":gen_golden", ":build_nodejs", "//bindings/nodejs:test_parity.js", "//:Cargo.toml"],
-    env = {"GOLDEN_JSON": "$(rootpath :gen_golden)"},
-    tags = ["no-sandbox", "local"],
-)
-
-genrule(
-    name = "build_python",
-    srcs = ["//:Cargo.toml"],
-    outs = ["python_built.stamp"],
-    cmd = "WS=$$(dirname $$(readlink -f $(location //:Cargo.toml))) && " +
-          "cd $$WS && maturin develop --manifest-path bindings/python/Cargo.toml --release >&2 && touch $@",
-    tags = ["no-sandbox", "local"],
-)
-
-write_file(
-    name = "gen_python_runner",
-    out = "run_python.sh",
-    content = [
-        "#!/usr/bin/env bash",
-        "set -euo pipefail",
-        'WS=$(dirname "$(readlink -f "$TEST_SRCDIR/_main/Cargo.toml")")',
-        'export GOLDEN_JSON="$TEST_SRCDIR/_main/$GOLDEN_JSON"',
-        'source "$WS/.venv/bin/activate"',
-        'exec python3 "$WS/bindings/python/test_parity.py"',
-    ],
-    is_executable = True,
-)
-
-sh_test(
-    name = "parity_python",
-    srcs = [":gen_python_runner"],
-    data = [":gen_golden", ":build_python", "//bindings/python:test_parity.py", "//:Cargo.toml"],
-    env = {"GOLDEN_JSON": "$(rootpath :gen_golden)"},
-    tags = ["no-sandbox", "local"],
+    env = GOLDEN_ENV,
 )
 
 cc_test(
@@ -87,17 +28,65 @@ cc_test(
         "@cjson",
     ],
     data = [":gen_golden"],
-    env = {"GOLDEN_JSON": "$(rootpath :gen_golden)"},
-    tags = ["no-sandbox", "local"],
+    env = GOLDEN_ENV,
 )
 
-genrule(
-    name = "build_wasm",
-    srcs = ["//:Cargo.toml"],
-    outs = ["wasm_built.stamp"],
-    cmd = "WS=$$(dirname $$(readlink -f $(location //:Cargo.toml))) && " +
-          "cd $$WS && wasm-pack build bindings/wasm --target nodejs --release >&2 && touch $@",
-    tags = ["no-sandbox", "local"],
+write_file(
+    name = "gen_nodejs_runner",
+    out = "run_nodejs.sh",
+    content = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        'RUNFILES="${TEST_SRCDIR}/${TEST_WORKSPACE}"',
+        'export GOLDEN_JSON="${RUNFILES}/${GOLDEN_JSON}"',
+        'export STDBR_NODE="${RUNFILES}/${STDBR_NODE}"',
+        'exec node --test "${RUNFILES}/${STDBR_TEST_JS}"',
+    ],
+    is_executable = True,
+)
+
+sh_test(
+    name = "parity_nodejs",
+    srcs = [":gen_nodejs_runner"],
+    data = [
+        ":gen_golden",
+        "//bindings/nodejs:stdbr-node",
+        "//bindings/nodejs:test_parity.js",
+    ],
+    env = {
+        "GOLDEN_JSON": "$(rootpath :gen_golden)",
+        "STDBR_NODE": "$(rootpath //bindings/nodejs:stdbr-node)",
+        "STDBR_TEST_JS": "$(rootpath //bindings/nodejs:test_parity.js)",
+    },
+)
+
+write_file(
+    name = "gen_python_runner",
+    out = "run_python.sh",
+    content = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        'RUNFILES="${TEST_SRCDIR}/${TEST_WORKSPACE}"',
+        'export GOLDEN_JSON="${RUNFILES}/${GOLDEN_JSON}"',
+        'export STDBR_PYMODULE="${RUNFILES}/${STDBR_PYMODULE}"',
+        'exec python3 "${RUNFILES}/${STDBR_TEST_PY}"',
+    ],
+    is_executable = True,
+)
+
+sh_test(
+    name = "parity_python",
+    srcs = [":gen_python_runner"],
+    data = [
+        ":gen_golden",
+        "//bindings/python:stdbr-pymodule",
+        "//bindings/python:test_parity.py",
+    ],
+    env = {
+        "GOLDEN_JSON": "$(rootpath :gen_golden)",
+        "STDBR_PYMODULE": "$(rootpath //bindings/python:stdbr-pymodule)",
+        "STDBR_TEST_PY": "$(rootpath //bindings/python:test_parity.py)",
+    },
 )
 
 write_file(
@@ -106,10 +95,12 @@ write_file(
     content = [
         "#!/usr/bin/env bash",
         "set -euo pipefail",
-        'WS=$(dirname "$(readlink -f "$TEST_SRCDIR/_main/Cargo.toml")")',
-        'export GOLDEN_JSON="$TEST_SRCDIR/_main/$GOLDEN_JSON"',
-        'export WASM_PKG="$WS/bindings/wasm/pkg/stdbr_wasm.js"',
-        'exec node --test "$WS/bindings/wasm/test_parity.js"',
+        'RUNFILES="${TEST_SRCDIR}/${TEST_WORKSPACE}"',
+        'export GOLDEN_JSON="${RUNFILES}/${GOLDEN_JSON}"',
+        'for f in $WASM_PKG_FILES; do',
+        '  case "$f" in *.js) export WASM_PKG="${RUNFILES}/$f"; break;; esac',
+        "done",
+        'exec node --test "${RUNFILES}/${STDBR_TEST_JS}"',
     ],
     is_executable = True,
 )
@@ -117,7 +108,14 @@ write_file(
 sh_test(
     name = "parity_wasm",
     srcs = [":gen_wasm_runner"],
-    data = [":gen_golden", ":build_wasm", "//bindings/wasm:test_parity.js", "//:Cargo.toml"],
-    env = {"GOLDEN_JSON": "$(rootpath :gen_golden)"},
-    tags = ["no-sandbox", "local"],
+    data = [
+        ":gen_golden",
+        "//bindings/wasm:stdbr-wasm",
+        "//bindings/wasm:test_parity.js",
+    ],
+    env = {
+        "GOLDEN_JSON": "$(rootpath :gen_golden)",
+        "WASM_PKG_FILES": "$(rootpaths //bindings/wasm:stdbr-wasm)",
+        "STDBR_TEST_JS": "$(rootpath //bindings/wasm:test_parity.js)",
+    },
 )
