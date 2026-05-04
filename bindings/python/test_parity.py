@@ -169,6 +169,73 @@ class TestCep(unittest.TestCase):
         self.assertEqual(stdbr.Cep.parse(raw).as_str(), raw)
 
 
+class TestRg(unittest.TestCase):
+    def _uf(self, abbr):
+        return stdbr.state_from_abbreviation(abbr)
+
+    def test_parse(self):
+        for c in GOLDEN["rg"]["parse"]:
+            with self.subTest(input=c["input"], uf=c["uf"]):
+                rg = stdbr.Rg.parse(c["input"], self._uf(c["uf"]))
+                self.assertEqual(rg.as_str(), c["digits_only"])
+                self.assertEqual(rg.formatted(), c["formatted"])
+                self.assertEqual(stdbr.state_abbreviation(rg.uf), c["uf_out"])
+                self.assertEqual(rg.check_digit, c["check_digit"])
+
+    def test_is_valid(self):
+        for c in GOLDEN["rg"]["is_valid"]:
+            with self.subTest(input=c["input"], uf=c["uf"]):
+                self.assertEqual(
+                    stdbr.rg_is_valid(c["input"], self._uf(c["uf"])), c["expected"]
+                )
+
+    def test_is_valid_strict(self):
+        for c in GOLDEN["rg"]["is_valid_strict"]:
+            with self.subTest(input=c["input"], uf=c["uf"]):
+                if c["valid"]:
+                    stdbr.rg_is_valid_strict(c["input"], self._uf(c["uf"]))
+                else:
+                    with self.assertRaises(ValueError) as ctx:
+                        stdbr.rg_is_valid_strict(c["input"], self._uf(c["uf"]))
+                    self.assertEqual(str(ctx.exception), c["error"])
+
+    def test_format(self):
+        for c in GOLDEN["rg"]["format"]:
+            with self.subTest(input=c["input"], uf=c["uf"]):
+                self.assertEqual(
+                    stdbr.rg_format(c["input"], self._uf(c["uf"])), c["expected"]
+                )
+
+    def test_remove_symbols(self):
+        for c in GOLDEN["rg"]["remove_symbols"]:
+            with self.subTest(input=c["input"], uf=c["uf"]):
+                self.assertEqual(
+                    stdbr.rg_remove_symbols(c["input"], self._uf(c["uf"])),
+                    c["expected"],
+                )
+
+    def test_compute_check_digit(self):
+        for c in GOLDEN["rg"]["compute_check_digit"]:
+            with self.subTest(base=c["base"], uf=c["uf"]):
+                self.assertEqual(
+                    stdbr.rg_compute_check_digit(c["base"], self._uf(c["uf"])),
+                    c["expected"],
+                )
+
+    def test_generate_sp_roundtrip(self):
+        uf = self._uf(GOLDEN["rg"]["generate"]["uf"])
+        raw = stdbr.rg_generate_sp()
+        self.assertTrue(stdbr.rg_is_valid(raw, uf))
+        self.assertEqual(stdbr.Rg.parse(raw, uf).as_str(), raw)
+
+    def test_generate_unsupported(self):
+        for c in GOLDEN["rg"]["generate_unsupported"]:
+            with self.subTest(uf=c["uf"]):
+                with self.assertRaises(ValueError) as ctx:
+                    stdbr.Rg.generate_for_uf(self._uf(c["uf"]))
+                self.assertEqual(str(ctx.exception), c["error"])
+
+
 class TestUf(unittest.TestCase):
     def test_states(self):
         states = stdbr.all_states()

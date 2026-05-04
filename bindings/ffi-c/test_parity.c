@@ -414,6 +414,168 @@ static void test_cep(cJSON *cep_json) {
     }
 }
 
+static StdbrRgError rg_error_from_str(const char *s) {
+    if (!s) return 0;
+    if (strstr(s, "outside the accepted range")) return 1;
+    if (strstr(s, "invalid characters")) return 2;
+    if (strstr(s, "does not match the canonical mask")) return 3;
+    if (strstr(s, "check digit is invalid")) return 4;
+    if (strstr(s, "generation is not supported")) return 5;
+    fprintf(stderr, "WARNING: unknown RG error string: %s\n", s);
+    return 255;
+}
+
+static bool uf_from_json(cJSON *item, const char *key, StdbrState *out) {
+    const char *abbr = cJSON_GetObjectItem(item, key)->valuestring;
+    return stdbr_state_from_abbreviation(abbr, out);
+}
+
+static void test_rg(cJSON *rg_json) {
+    printf("  RG...\n");
+
+    cJSON *parse = cJSON_GetObjectItem(rg_json, "parse");
+    cJSON *item;
+    cJSON_ArrayForEach(item, parse) {
+        const char *input = cJSON_GetObjectItem(item, "input")->valuestring;
+        const char *digits_only = cJSON_GetObjectItem(item, "digits_only")->valuestring;
+        const char *formatted = cJSON_GetObjectItem(item, "formatted")->valuestring;
+        const char *uf_out = cJSON_GetObjectItem(item, "uf_out")->valuestring;
+        cJSON *cd_json = cJSON_GetObjectItem(item, "check_digit");
+
+        StdbrState uf;
+        if (!uf_from_json(item, "uf", &uf)) {
+            ASSERT_BOOL_EQ(false, true, "rg parse uf lookup");
+            continue;
+        }
+
+        StdbrRgError err;
+        StdbrRg *rg = stdbr_rg_parse(input, uf, &err);
+        ASSERT_INT_EQ(err, 0, "rg_parse err");
+        ASSERT_NOT_NULL(rg, "rg_parse result");
+        if (!rg) continue;
+
+        assert_str_eq_free(stdbr_rg_as_str(rg), digits_only, "rg as_str");
+        assert_str_eq_free(stdbr_rg_formatted(rg), formatted, "rg formatted");
+
+        StdbrState got_uf = stdbr_rg_uf(rg);
+        char *got_uf_abbr = stdbr_state_abbreviation(got_uf);
+        ASSERT_STR_EQ(got_uf_abbr, uf_out, "rg uf abbr");
+        stdbr_free(got_uf_abbr);
+
+        uint8_t cd = 0;
+        bool has_cd = stdbr_rg_check_digit(rg, &cd);
+        if (cJSON_IsNull(cd_json)) {
+            ASSERT_BOOL_EQ(has_cd, false, "rg check_digit absent");
+        } else {
+            ASSERT_BOOL_EQ(has_cd, true, "rg check_digit present");
+            ASSERT_INT_EQ(cd, cd_json->valueint, "rg check_digit value");
+        }
+
+        stdbr_rg_destroy(rg);
+    }
+
+    cJSON *is_valid = cJSON_GetObjectItem(rg_json, "is_valid");
+    cJSON_ArrayForEach(item, is_valid) {
+        const char *input = cJSON_GetObjectItem(item, "input")->valuestring;
+        bool expected = cJSON_IsTrue(cJSON_GetObjectItem(item, "expected"));
+        StdbrState uf;
+        if (!uf_from_json(item, "uf", &uf)) continue;
+        ASSERT_BOOL_EQ(stdbr_rg_is_valid(input, uf), expected, "rg is_valid");
+    }
+
+    cJSON *strict = cJSON_GetObjectItem(rg_json, "is_valid_strict");
+    cJSON_ArrayForEach(item, strict) {
+        const char *input = cJSON_GetObjectItem(item, "input")->valuestring;
+        bool valid = cJSON_IsTrue(cJSON_GetObjectItem(item, "valid"));
+        StdbrState uf;
+        if (!uf_from_json(item, "uf", &uf)) continue;
+        StdbrRgError err = stdbr_rg_is_valid_strict(input, uf);
+        if (valid) {
+            ASSERT_INT_EQ(err, 0, "rg strict valid");
+        } else {
+            const char *error_str = cJSON_GetObjectItem(item, "error")->valuestring;
+            StdbrRgError expected_err = rg_error_from_str(error_str);
+            ASSERT_INT_EQ(err, expected_err, "rg strict error");
+        }
+    }
+
+    cJSON *fmt = cJSON_GetObjectItem(rg_json, "format");
+    cJSON_ArrayForEach(item, fmt) {
+        const char *input = cJSON_GetObjectItem(item, "input")->valuestring;
+        cJSON *exp_json = cJSON_GetObjectItem(item, "expected");
+        StdbrState uf;
+        if (!uf_from_json(item, "uf", &uf)) continue;
+        char *got = stdbr_rg_format(input, uf);
+        if (cJSON_IsNull(exp_json)) {
+            ASSERT_NULL(got, "rg format null");
+        } else {
+            assert_str_eq_free(got, exp_json->valuestring, "rg format");
+            got = NULL;
+        }
+        if (got) stdbr_free(got);
+    }
+
+    cJSON *rs = cJSON_GetObjectItem(rg_json, "remove_symbols");
+    cJSON_ArrayForEach(item, rs) {
+        const char *input = cJSON_GetObjectItem(item, "input")->valuestring;
+        const char *expected = cJSON_GetObjectItem(item, "expected")->valuestring;
+        StdbrState uf;
+        if (!uf_from_json(item, "uf", &uf)) continue;
+        assert_str_eq_free(stdbr_rg_remove_symbols(input, uf), expected, "rg remove_symbols");
+    }
+
+    cJSON *ccd = cJSON_GetObjectItem(rg_json, "compute_check_digit");
+    cJSON_ArrayForEach(item, ccd) {
+        const char *base = cJSON_GetObjectItem(item, "base")->valuestring;
+        cJSON *exp_json = cJSON_GetObjectItem(item, "expected");
+        StdbrState uf;
+        if (!uf_from_json(item, "uf", &uf)) continue;
+        uint8_t out = 0;
+        bool ok = stdbr_rg_compute_check_digit(base, uf, &out);
+        if (cJSON_IsNull(exp_json)) {
+            ASSERT_BOOL_EQ(ok, false, "rg compute_check_digit null");
+        } else {
+            ASSERT_BOOL_EQ(ok, true, "rg compute_check_digit ok");
+            ASSERT_INT_EQ(out, exp_json->valueint, "rg compute_check_digit value");
+        }
+    }
+
+    StdbrState gen_uf;
+    cJSON *gen = cJSON_GetObjectItem(rg_json, "generate");
+    const char *gen_uf_abbr = cJSON_GetObjectItem(gen, "uf")->valuestring;
+    if (stdbr_state_from_abbreviation(gen_uf_abbr, &gen_uf)) {
+        char *generated = stdbr_rg_generate_sp();
+        ASSERT_NOT_NULL(generated, "rg generate_sp");
+        if (generated) {
+            ASSERT_BOOL_EQ(stdbr_rg_is_valid(generated, gen_uf), true, "rg generate valid");
+            StdbrRgError err;
+            StdbrRg *rg = stdbr_rg_parse(generated, gen_uf, &err);
+            ASSERT_NOT_NULL(rg, "rg generate parse");
+            if (rg) {
+                char *s = stdbr_rg_as_str(rg);
+                ASSERT_STR_EQ(s, generated, "rg generate roundtrip");
+                stdbr_free(s);
+                stdbr_rg_destroy(rg);
+            }
+            stdbr_free(generated);
+        }
+    }
+
+    cJSON *gen_unsup = cJSON_GetObjectItem(rg_json, "generate_unsupported");
+    cJSON_ArrayForEach(item, gen_unsup) {
+        const char *uf_abbr = cJSON_GetObjectItem(item, "uf")->valuestring;
+        const char *err_str = cJSON_GetObjectItem(item, "error")->valuestring;
+        StdbrState uf;
+        if (!stdbr_state_from_abbreviation(uf_abbr, &uf)) continue;
+        StdbrRgError err;
+        StdbrRg *rg = stdbr_rg_create_for_uf(uf, &err);
+        ASSERT_NULL(rg, "rg create_for_uf unsupported null");
+        if (rg) stdbr_rg_destroy(rg);
+        StdbrRgError expected_err = rg_error_from_str(err_str);
+        ASSERT_INT_EQ(err, expected_err, "rg create_for_uf err");
+    }
+}
+
 static void test_uf(cJSON *uf_json) {
     printf("  UF...\n");
 
@@ -607,6 +769,7 @@ int main(void) {
     test_cpf(cJSON_GetObjectItem(golden, "cpf"));
     test_cnpj(cJSON_GetObjectItem(golden, "cnpj"));
     test_cep(cJSON_GetObjectItem(golden, "cep"));
+    test_rg(cJSON_GetObjectItem(golden, "rg"));
     test_uf(cJSON_GetObjectItem(golden, "uf"));
     test_municipio(cJSON_GetObjectItem(golden, "municipio"));
 
