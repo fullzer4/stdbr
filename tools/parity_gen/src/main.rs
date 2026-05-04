@@ -5,7 +5,7 @@
 //! ```
 
 use serde_json::{Value, json};
-use stdbr_core::{cep, cnpj, cpf, municipio, uf};
+use stdbr_core::{cep, cnpj, cpf, municipio, rg, uf};
 
 const IBGE_API_URL: &str =
     "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome";
@@ -17,6 +17,7 @@ fn main() {
         "cpf": cpf_cases(),
         "cnpj": cnpj_cases(),
         "cep": cep_cases(),
+        "rg": rg_cases(),
         "uf": uf_cases(),
         "municipio": municipio_cases(&ibge),
     });
@@ -253,6 +254,121 @@ fn cep_cases() -> Value {
         ],
         "generate": { "test_roundtrip": true },
     })
+}
+
+fn rg_cases() -> Value {
+    let sp_samples: Vec<rg::Rg> = ["123456789", "50000000X"]
+        .iter()
+        .map(|s| rg::parse_strict(s, uf::State::SP).unwrap())
+        .collect();
+
+    let parse: Vec<Value> = ["12.345.678-9", "50.000.000-X"]
+        .iter()
+        .zip(&sp_samples)
+        .map(|(&input, parsed)| {
+            json!({
+                "input": input,
+                "uf": "SP",
+                "digits_only": parsed.as_str(),
+                "formatted": parsed.formatted(),
+                "uf_out": parsed.uf().abbreviation(),
+                "check_digit": parsed.check_digit(),
+            })
+        })
+        .collect();
+
+    let rj_struct = rg::parse_strict("1234567", uf::State::RJ).unwrap();
+
+    let parse_struct: Vec<Value> = vec![json!({
+        "input": "1234567",
+        "uf": "RJ",
+        "digits_only": rj_struct.as_str(),
+        "formatted": rj_struct.formatted(),
+        "uf_out": rj_struct.uf().abbreviation(),
+        "check_digit": rj_struct.check_digit(),
+    })];
+
+    let mut all_parse = parse;
+    all_parse.extend(parse_struct);
+
+    json!({
+        "parse": all_parse,
+        "is_valid": [
+            { "input": "12.345.678-9", "uf": "SP", "expected": true },
+            { "input": "123456789",    "uf": "SP", "expected": true },
+            { "input": "50.000.000-X", "uf": "SP", "expected": true },
+            { "input": "12.345.678-8", "uf": "SP", "expected": false },
+            { "input": "1234567",      "uf": "RJ", "expected": true  },
+            { "input": "1234",         "uf": "RJ", "expected": false },
+            { "input": "abc",          "uf": "RJ", "expected": false },
+            { "input": "",             "uf": "SP", "expected": false },
+        ],
+        "is_valid_strict": [
+            sp_strict("12.345.678-9", true,  None),
+            sp_strict("123456789",    true,  None),
+            sp_strict("50.000.000-X", true,  None),
+            sp_strict("12.345.678-8", false, Some("RG check digit is invalid")),
+            sp_strict("123.45.678-9", false, Some("RG format does not match the canonical mask for this UF")),
+            sp_strict("",             false, Some("RG length is outside the accepted range for this UF")),
+            rj_strict("1234567",      true,  None),
+            rj_strict("12.345-67",    false, Some("RG contains invalid characters")),
+        ],
+        "format": [
+            { "input": "123456789",    "uf": "SP", "expected": "12.345.678-9" },
+            { "input": "50000000X",    "uf": "SP", "expected": "50.000.000-X" },
+            { "input": "12.345.678-9", "uf": "SP", "expected": "12.345.678-9" },
+            { "input": "1234567",      "uf": "RJ", "expected": "1234567" },
+            { "input": "12",           "uf": "SP", "expected": null },
+        ],
+        "remove_symbols": [
+            { "input": "12.345.678-9", "uf": "SP", "expected": "123456789" },
+            { "input": "50.000.000-X", "uf": "SP", "expected": "50000000X" },
+            { "input": "50.000.000-x", "uf": "SP", "expected": "50000000X" },
+            { "input": "12.345-67",    "uf": "RJ", "expected": "1234567" },
+        ],
+        "compute_check_digit": [
+            { "base": "12345678", "uf": "SP", "expected": 9 },
+            { "base": "44444444", "uf": "SP", "expected": 0 },
+            { "base": "50000000", "uf": "SP", "expected": 10 },
+            { "base": "12345678", "uf": "RJ", "expected": null },
+            { "base": "1234",     "uf": "SP", "expected": null },
+        ],
+        "generate": { "test_roundtrip": true, "uf": "SP" },
+        "generate_unsupported": [
+            { "uf": "RJ", "error": "RG generation is not supported for this UF (no verified algorithm)" },
+        ],
+    })
+}
+
+fn sp_strict(input: &str, valid: bool, err: Option<&str>) -> Value {
+    let actual = rg::is_valid_strict(input, uf::State::SP);
+    rg_strict_assert(input, valid, err, actual, "SP")
+}
+
+fn rj_strict(input: &str, valid: bool, err: Option<&str>) -> Value {
+    let actual = rg::is_valid_strict(input, uf::State::RJ);
+    rg_strict_assert(input, valid, err, actual, "RJ")
+}
+
+fn rg_strict_assert(
+    input: &str,
+    valid: bool,
+    err: Option<&str>,
+    actual: Result<(), rg::RgError>,
+    uf_label: &str,
+) -> Value {
+    match (valid, err) {
+        (true, None) => {
+            assert!(actual.is_ok(), "expected Ok for {input} ({uf_label}), got {actual:?}");
+            json!({ "input": input, "uf": uf_label, "valid": true })
+        }
+        (false, Some(msg)) => {
+            let got = actual.expect_err("expected error");
+            assert_eq!(got.to_string(), msg, "error mismatch for {input} ({uf_label})");
+            json!({ "input": input, "uf": uf_label, "valid": false, "error": msg })
+        }
+        _ => panic!("inconsistent strict case: input={input} valid={valid} err={err:?}"),
+    }
 }
 
 fn uf_cases() -> Value {

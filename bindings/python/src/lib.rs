@@ -2,6 +2,7 @@ mod cep;
 mod cnpj;
 mod cpf;
 mod municipio;
+mod rg;
 pub(crate) mod uf;
 
 use pyo3::prelude::*;
@@ -12,5 +13,6 @@ fn stdbr(m: &Bound<'_, PyModule>) -> PyResult<()> {
     cpf::register(m)?;
     cnpj::register(m)?;
     cep::register(m)?;
+    rg::register(m)?;
     municipio::register(m)
 }

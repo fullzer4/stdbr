@@ -13,4 +13,5 @@ pub mod cep;
 pub mod cnpj;
 pub mod cpf;
 pub mod municipio;
+pub mod rg;
 pub mod uf;

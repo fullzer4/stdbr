@@ -5,7 +5,7 @@
 
 use serde_json::Value;
 use std::collections::HashMap;
-use stdbr_core::{cep, cnpj, cpf, municipio, uf};
+use stdbr_core::{cep, cnpj, cpf, municipio, rg, uf};
 
 fn golden() -> Value {
     let path =
@@ -329,6 +329,129 @@ fn cep_generate_roundtrip() {
     assert!(cep::is_valid(&raw), "generated CEP {raw} is not valid");
     let parsed: cep::Cep = raw.parse().unwrap();
     assert_eq!(parsed.as_str(), raw);
+}
+
+// ── RG ───────────────────────────────────────────────────────────────
+
+fn parse_uf(s: &str) -> uf::State {
+    uf::State::from_abbreviation(s).unwrap_or_else(|| panic!("unknown UF: {s}"))
+}
+
+#[test]
+fn rg_parse() {
+    let cases = &golden()["rg"]["parse"];
+    for case in cases.as_array().unwrap() {
+        let input = case["input"].as_str().unwrap();
+        let uf = parse_uf(case["uf"].as_str().unwrap());
+        let parsed = rg::parse_strict(input, uf).unwrap_or_else(|e| {
+            panic!("parse_strict({input}, {}) failed: {e}", uf.abbreviation())
+        });
+        assert_eq!(parsed.as_str(), case["digits_only"].as_str().unwrap());
+        assert_eq!(parsed.formatted(), case["formatted"].as_str().unwrap());
+        assert_eq!(parsed.uf().abbreviation(), case["uf_out"].as_str().unwrap());
+        let expected_cd = case["check_digit"].as_u64().map(|v| v as u8);
+        assert_eq!(parsed.check_digit(), expected_cd);
+    }
+}
+
+#[test]
+fn rg_is_valid() {
+    let cases = &golden()["rg"]["is_valid"];
+    for case in cases.as_array().unwrap() {
+        let input = case["input"].as_str().unwrap();
+        let uf = parse_uf(case["uf"].as_str().unwrap());
+        let expected = case["expected"].as_bool().unwrap();
+        assert_eq!(
+            rg::is_valid(input, uf),
+            expected,
+            "is_valid({input}, {})",
+            uf.abbreviation()
+        );
+    }
+}
+
+#[test]
+fn rg_is_valid_strict() {
+    let cases = &golden()["rg"]["is_valid_strict"];
+    for case in cases.as_array().unwrap() {
+        let input = case["input"].as_str().unwrap();
+        let uf = parse_uf(case["uf"].as_str().unwrap());
+        let valid = case["valid"].as_bool().unwrap();
+        let result = rg::is_valid_strict(input, uf);
+        if valid {
+            assert!(
+                result.is_ok(),
+                "is_valid_strict({input}, {}) expected Ok",
+                uf.abbreviation()
+            );
+        } else {
+            let err = result.unwrap_err();
+            let expected_msg = case["error"].as_str().unwrap();
+            assert_eq!(err.to_string(), expected_msg);
+        }
+    }
+}
+
+#[test]
+fn rg_format() {
+    let cases = &golden()["rg"]["format"];
+    for case in cases.as_array().unwrap() {
+        let input = case["input"].as_str().unwrap();
+        let uf = parse_uf(case["uf"].as_str().unwrap());
+        let expected = case["expected"].as_str();
+        assert_eq!(
+            rg::format_rg(input, uf).as_deref(),
+            expected,
+            "format({input}, {})",
+            uf.abbreviation()
+        );
+    }
+}
+
+#[test]
+fn rg_remove_symbols() {
+    let cases = &golden()["rg"]["remove_symbols"];
+    for case in cases.as_array().unwrap() {
+        let input = case["input"].as_str().unwrap();
+        let uf = parse_uf(case["uf"].as_str().unwrap());
+        let expected = case["expected"].as_str().unwrap();
+        assert_eq!(rg::remove_symbols(input, uf), expected);
+    }
+}
+
+#[test]
+fn rg_compute_check_digit() {
+    let cases = &golden()["rg"]["compute_check_digit"];
+    for case in cases.as_array().unwrap() {
+        let base = case["base"].as_str().unwrap();
+        let uf = parse_uf(case["uf"].as_str().unwrap());
+        let result = rg::compute_check_digit(base, uf);
+        if case["expected"].is_null() {
+            assert!(result.is_none());
+        } else {
+            assert_eq!(result, Some(case["expected"].as_u64().unwrap() as u8));
+        }
+    }
+}
+
+#[test]
+fn rg_generate_roundtrip() {
+    let gen_uf = parse_uf(golden()["rg"]["generate"]["uf"].as_str().unwrap());
+    let rg_val = rg::generate_for_uf(gen_uf).unwrap();
+    assert!(rg::is_valid(rg_val.as_str(), gen_uf));
+    let parsed = rg::parse_strict(rg_val.as_str(), gen_uf).unwrap();
+    assert_eq!(parsed.as_str(), rg_val.as_str());
+}
+
+#[test]
+fn rg_generate_unsupported() {
+    let cases = &golden()["rg"]["generate_unsupported"];
+    for case in cases.as_array().unwrap() {
+        let uf = parse_uf(case["uf"].as_str().unwrap());
+        let expected = case["error"].as_str().unwrap();
+        let err = rg::generate_for_uf(uf).unwrap_err();
+        assert_eq!(err.to_string(), expected);
+    }
 }
 
 // ── UF ───────────────────────────────────────────────────────────────
