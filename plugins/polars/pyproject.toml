@@ -1,0 +1,14 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "polars-stdbr"
+requires-python = ">=3.9"
+dependencies = ["polars>=1.0"]
+dynamic = ["version"]
+description = "Polars expression plugin for Brazilian document validation (CPF, CNPJ, CEP)"
+license = { text = "MIT OR Apache-2.0" }
+
+[tool.maturin]
+python-source = "."
