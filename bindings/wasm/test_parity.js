@@ -16,6 +16,8 @@ const {
   cnpjGenerate, cnpjComputeCheckDigits, CnpjKind,
   Cep, cepIsValid, cepIsValidStrict, cepFormat, cepRemoveSymbols,
   cepGenerate,
+  Rg, rgIsValid, rgIsValidStrict, rgFormat, rgRemoveSymbols,
+  rgComputeCheckDigit, rgGenerate,
   stateAbbreviation, stateName, stateFromAbbreviation, allStates,
   municipioFromIbgeCode, municipioCapitalOf, municipiosByState,
   municipioSearchByName, municipioCount,
@@ -182,6 +184,94 @@ describe("CEP", () => {
     const raw = cepGenerate();
     ok(cepIsValid(raw));
     strictEqual(Cep.parse(raw).asStr(), raw);
+  });
+});
+
+describe("RG", () => {
+  describe("parse", () => {
+    for (const c of golden.rg.parse) {
+      it(`${c.input} (${c.uf})`, () => {
+        const uf = stateFromAbbreviation(c.uf);
+        const rg = Rg.parse(c.input, uf);
+        strictEqual(rg.asStr(), c.digits_only);
+        strictEqual(rg.formatted(), c.formatted);
+        strictEqual(stateAbbreviation(rg.uf), c.uf_out);
+        const cd = rg.checkDigit;
+        strictEqual(cd === undefined ? null : cd, c.check_digit);
+      });
+    }
+  });
+
+  describe("is_valid", () => {
+    for (const c of golden.rg.is_valid)
+      it(`${c.input || "(empty)"} (${c.uf})`, () =>
+        strictEqual(rgIsValid(c.input, stateFromAbbreviation(c.uf)), c.expected));
+  });
+
+  describe("is_valid_strict", () => {
+    for (const c of golden.rg.is_valid_strict) {
+      it(`${c.input || "(empty)"} (${c.uf})`, () => {
+        const uf = stateFromAbbreviation(c.uf);
+        if (c.valid) {
+          rgIsValidStrict(c.input, uf);
+        } else {
+          try {
+            rgIsValidStrict(c.input, uf);
+            ok(false, "should throw");
+          } catch (e) {
+            strictEqual(e.message, c.error);
+          }
+        }
+      });
+    }
+  });
+
+  describe("format", () => {
+    for (const c of golden.rg.format) {
+      it(`${c.input || "(empty)"} (${c.uf})`, () => {
+        const got = rgFormat(c.input, stateFromAbbreviation(c.uf));
+        strictEqual(got !== undefined ? got : null, c.expected);
+      });
+    }
+  });
+
+  describe("remove_symbols", () => {
+    for (const c of golden.rg.remove_symbols)
+      it(`${c.input} (${c.uf})`, () =>
+        strictEqual(
+          rgRemoveSymbols(c.input, stateFromAbbreviation(c.uf)),
+          c.expected,
+        ));
+  });
+
+  describe("compute_check_digit", () => {
+    for (const c of golden.rg.compute_check_digit) {
+      it(`${c.base} (${c.uf})`, () => {
+        const got = rgComputeCheckDigit(c.base, stateFromAbbreviation(c.uf));
+        strictEqual(got === undefined ? null : got, c.expected);
+      });
+    }
+  });
+
+  it("generate roundtrip", () => {
+    const uf = stateFromAbbreviation(golden.rg.generate.uf);
+    const raw = rgGenerate(uf);
+    ok(rgIsValid(raw, uf));
+    strictEqual(Rg.parse(raw, uf).asStr(), raw);
+  });
+
+  describe("generate_unsupported", () => {
+    for (const c of golden.rg.generate_unsupported) {
+      it(c.uf, () => {
+        const uf = stateFromAbbreviation(c.uf);
+        try {
+          Rg.generate(uf);
+          ok(false, "should throw");
+        } catch (e) {
+          strictEqual(e.message, c.error);
+        }
+      });
+    }
   });
 });
 
