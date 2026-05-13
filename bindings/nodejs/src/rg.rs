@@ -27,8 +27,8 @@ impl Rg {
 
     /// Generate a random valid RG. Currently SP only; other UFs return an error.
     #[napi(factory)]
-    pub fn generate_for_uf(uf: State) -> Result<Rg> {
-        core_rg::generate_for_uf(uf.into())
+    pub fn generate(uf: State) -> Result<Rg> {
+        core_rg::generate(uf.into())
             .map(|inner| Rg { inner })
             .map_err(|e| rg_err(&e))
     }
@@ -43,6 +43,18 @@ impl Rg {
     #[napi]
     pub fn formatted(&self) -> String {
         self.inner.formatted()
+    }
+
+    /// Masked representation — first 2 digits visible, rest masked.
+    #[napi]
+    pub fn masked(&self) -> String {
+        self.inner.masked()
+    }
+
+    /// Body without check digit (SP: 8-digit base; others: full string).
+    #[napi]
+    pub fn body(&self) -> String {
+        self.inner.body().to_owned()
     }
 
     /// Issuing UF.
@@ -95,8 +107,10 @@ pub fn rg_compute_check_digit(base: String, uf: State) -> Option<u8> {
     core_rg::compute_check_digit(&base, uf.into())
 }
 
-/// Generate a random valid SP RG (unformatted body).
+/// Generate a random valid RG (unformatted body). Currently SP only.
 #[napi]
-pub fn rg_generate_sp() -> String {
-    core_rg::generate_sp().as_str().to_owned()
+pub fn rg_generate(uf: State) -> Result<String> {
+    core_rg::generate(uf.into())
+        .map(|rg| rg.as_str().to_owned())
+        .map_err(|e| rg_err(&e))
 }

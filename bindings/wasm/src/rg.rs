@@ -22,9 +22,9 @@ impl Rg {
     }
 
     /// Generate a random valid RG. Currently SP only.
-    #[wasm_bindgen(js_name = "generateForUf")]
-    pub fn generate_for_uf(uf: State) -> Result<Rg, JsError> {
-        core_rg::generate_for_uf(uf.into())
+    #[wasm_bindgen]
+    pub fn generate(uf: State) -> Result<Rg, JsError> {
+        core_rg::generate(uf.into())
             .map(|inner| Self { inner })
             .map_err(|e| rg_err(&e))
     }
@@ -39,6 +39,18 @@ impl Rg {
     #[wasm_bindgen]
     pub fn formatted(&self) -> String {
         self.inner.formatted()
+    }
+
+    /// Masked representation — first 2 digits visible, rest masked.
+    #[wasm_bindgen]
+    pub fn masked(&self) -> String {
+        self.inner.masked()
+    }
+
+    /// Body without check digit (SP: 8-digit base; others: full string).
+    #[wasm_bindgen]
+    pub fn body(&self) -> String {
+        self.inner.body().to_owned()
     }
 
     #[wasm_bindgen(getter)]
@@ -78,7 +90,9 @@ pub fn rg_compute_check_digit(base: &str, uf: State) -> Option<u8> {
     core_rg::compute_check_digit(base, uf.into())
 }
 
-#[wasm_bindgen(js_name = "rgGenerateSp")]
-pub fn rg_generate_sp() -> String {
-    core_rg::generate_sp().as_str().to_owned()
+#[wasm_bindgen(js_name = "rgGenerate")]
+pub fn rg_generate(uf: State) -> Result<String, JsError> {
+    core_rg::generate(uf.into())
+        .map(|rg| rg.as_str().to_owned())
+        .map_err(|e| rg_err(&e))
 }

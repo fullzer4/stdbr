@@ -17,7 +17,7 @@ const {
   Cep, cepIsValid, cepIsValidStrict, cepFormat, cepRemoveSymbols,
   cepGenerate,
   Rg, rgIsValid, rgIsValidStrict, rgFormat, rgRemoveSymbols,
-  rgComputeCheckDigit, rgGenerateSp,
+  rgComputeCheckDigit, rgGenerate,
   stateAbbreviation, stateName, stateFromAbbreviation, allStates,
   municipioFromIbgeCode, municipioCapitalOf, municipiosByState,
   municipioSearchByName, municipioCount,
@@ -253,9 +253,9 @@ describe("RG", () => {
     }
   });
 
-  it("generate_sp roundtrip", () => {
+  it("generate roundtrip", () => {
     const uf = stateFromAbbreviation(golden.rg.generate.uf);
-    const raw = rgGenerateSp();
+    const raw = rgGenerate(uf);
     ok(rgIsValid(raw, uf));
     strictEqual(Rg.parse(raw, uf).asStr(), raw);
   });
@@ -265,7 +265,7 @@ describe("RG", () => {
       it(c.uf, () => {
         const uf = stateFromAbbreviation(c.uf);
         try {
-          Rg.generateForUf(uf);
+          Rg.generate(uf);
           ok(false, "should throw");
         } catch (e) {
           strictEqual(e.message, c.error);

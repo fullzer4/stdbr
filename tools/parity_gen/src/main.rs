@@ -257,12 +257,13 @@ fn cep_cases() -> Value {
 }
 
 fn rg_cases() -> Value {
-    let sp_samples: Vec<rg::Rg> = ["123456789", "50000000X"]
+    // Real RGs as primary samples (source of truth: bosontreinamentos.com.br, dev.to/shadowlik)
+    let sp_samples: Vec<rg::Rg> = ["294653272", "394067149", "60000000X"]
         .iter()
         .map(|s| rg::parse_strict(s, uf::State::SP).unwrap())
         .collect();
 
-    let parse: Vec<Value> = ["12.345.678-9", "50.000.000-X"]
+    let parse: Vec<Value> = ["29.465.327-2", "39.406.714-9", "60.000.000-X"]
         .iter()
         .zip(&sp_samples)
         .map(|(&input, parsed)| {
@@ -271,6 +272,8 @@ fn rg_cases() -> Value {
                 "uf": "SP",
                 "digits_only": parsed.as_str(),
                 "formatted": parsed.formatted(),
+                "masked": parsed.masked(),
+                "body": parsed.body(),
                 "uf_out": parsed.uf().abbreviation(),
                 "check_digit": parsed.check_digit(),
             })
@@ -284,6 +287,8 @@ fn rg_cases() -> Value {
         "uf": "RJ",
         "digits_only": rj_struct.as_str(),
         "formatted": rj_struct.formatted(),
+        "masked": rj_struct.masked(),
+        "body": rj_struct.body(),
         "uf_out": rj_struct.uf().abbreviation(),
         "check_digit": rj_struct.check_digit(),
     })];
@@ -294,42 +299,45 @@ fn rg_cases() -> Value {
     json!({
         "parse": all_parse,
         "is_valid": [
-            { "input": "12.345.678-9", "uf": "SP", "expected": true },
-            { "input": "123456789",    "uf": "SP", "expected": true },
-            { "input": "50.000.000-X", "uf": "SP", "expected": true },
-            { "input": "12.345.678-8", "uf": "SP", "expected": false },
+            { "input": "29.465.327-2", "uf": "SP", "expected": true },
+            { "input": "294653272",    "uf": "SP", "expected": true },
+            { "input": "39.406.714-9", "uf": "SP", "expected": true },
+            { "input": "60.000.000-X", "uf": "SP", "expected": true },
+            { "input": "29.465.327-1", "uf": "SP", "expected": false },
             { "input": "1234567",      "uf": "RJ", "expected": true  },
             { "input": "1234",         "uf": "RJ", "expected": false },
             { "input": "abc",          "uf": "RJ", "expected": false },
             { "input": "",             "uf": "SP", "expected": false },
         ],
         "is_valid_strict": [
-            sp_strict("12.345.678-9", true,  None),
-            sp_strict("123456789",    true,  None),
-            sp_strict("50.000.000-X", true,  None),
-            sp_strict("12.345.678-8", false, Some("RG check digit is invalid")),
-            sp_strict("123.45.678-9", false, Some("RG format does not match the canonical mask for this UF")),
+            sp_strict("29.465.327-2", true,  None),
+            sp_strict("294653272",    true,  None),
+            sp_strict("39.406.714-9", true,  None),
+            sp_strict("60.000.000-X", true,  None),
+            sp_strict("29.465.327-1", false, Some("RG check digit is invalid")),
+            sp_strict("123.45.678-2", false, Some("RG format does not match the canonical mask for this UF")),
             sp_strict("",             false, Some("RG length is outside the accepted range for this UF")),
             rj_strict("1234567",      true,  None),
             rj_strict("12.345-67",    false, Some("RG contains invalid characters")),
         ],
         "format": [
-            { "input": "123456789",    "uf": "SP", "expected": "12.345.678-9" },
-            { "input": "50000000X",    "uf": "SP", "expected": "50.000.000-X" },
-            { "input": "12.345.678-9", "uf": "SP", "expected": "12.345.678-9" },
+            { "input": "294653272",    "uf": "SP", "expected": "29.465.327-2" },
+            { "input": "60000000X",    "uf": "SP", "expected": "60.000.000-X" },
+            { "input": "29.465.327-2", "uf": "SP", "expected": "29.465.327-2" },
             { "input": "1234567",      "uf": "RJ", "expected": "1234567" },
             { "input": "12",           "uf": "SP", "expected": null },
         ],
         "remove_symbols": [
-            { "input": "12.345.678-9", "uf": "SP", "expected": "123456789" },
-            { "input": "50.000.000-X", "uf": "SP", "expected": "50000000X" },
-            { "input": "50.000.000-x", "uf": "SP", "expected": "50000000X" },
+            { "input": "29.465.327-2", "uf": "SP", "expected": "294653272" },
+            { "input": "60.000.000-X", "uf": "SP", "expected": "60000000X" },
+            { "input": "60.000.000-x", "uf": "SP", "expected": "60000000X" },
             { "input": "12.345-67",    "uf": "RJ", "expected": "1234567" },
         ],
         "compute_check_digit": [
-            { "base": "12345678", "uf": "SP", "expected": 9 },
+            { "base": "29465327", "uf": "SP", "expected": 2 },
+            { "base": "39406714", "uf": "SP", "expected": 9 },
             { "base": "44444444", "uf": "SP", "expected": 0 },
-            { "base": "50000000", "uf": "SP", "expected": 10 },
+            { "base": "60000000", "uf": "SP", "expected": 10 },
             { "base": "12345678", "uf": "RJ", "expected": null },
             { "base": "1234",     "uf": "SP", "expected": null },
         ],
@@ -359,12 +367,19 @@ fn rg_strict_assert(
 ) -> Value {
     match (valid, err) {
         (true, None) => {
-            assert!(actual.is_ok(), "expected Ok for {input} ({uf_label}), got {actual:?}");
+            assert!(
+                actual.is_ok(),
+                "expected Ok for {input} ({uf_label}), got {actual:?}"
+            );
             json!({ "input": input, "uf": uf_label, "valid": true })
         }
         (false, Some(msg)) => {
             let got = actual.expect_err("expected error");
-            assert_eq!(got.to_string(), msg, "error mismatch for {input} ({uf_label})");
+            assert_eq!(
+                got.to_string(),
+                msg,
+                "error mismatch for {input} ({uf_label})"
+            );
             json!({ "input": input, "uf": uf_label, "valid": false, "error": msg })
         }
         _ => panic!("inconsistent strict case: input={input} valid={valid} err={err:?}"),

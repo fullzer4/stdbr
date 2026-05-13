@@ -544,8 +544,9 @@ static void test_rg(cJSON *rg_json) {
     cJSON *gen = cJSON_GetObjectItem(rg_json, "generate");
     const char *gen_uf_abbr = cJSON_GetObjectItem(gen, "uf")->valuestring;
     if (stdbr_state_from_abbreviation(gen_uf_abbr, &gen_uf)) {
-        char *generated = stdbr_rg_generate_sp();
-        ASSERT_NOT_NULL(generated, "rg generate_sp");
+        StdbrRgError gen_err;
+        char *generated = stdbr_rg_generate(gen_uf, &gen_err);
+        ASSERT_NOT_NULL(generated, "rg generate");
         if (generated) {
             ASSERT_BOOL_EQ(stdbr_rg_is_valid(generated, gen_uf), true, "rg generate valid");
             StdbrRgError err;

@@ -222,9 +222,9 @@ class TestRg(unittest.TestCase):
                     c["expected"],
                 )
 
-    def test_generate_sp_roundtrip(self):
+    def test_generate_roundtrip(self):
         uf = self._uf(GOLDEN["rg"]["generate"]["uf"])
-        raw = stdbr.rg_generate_sp()
+        raw = stdbr.rg_generate(uf)
         self.assertTrue(stdbr.rg_is_valid(raw, uf))
         self.assertEqual(stdbr.Rg.parse(raw, uf).as_str(), raw)
 
@@ -232,7 +232,7 @@ class TestRg(unittest.TestCase):
         for c in GOLDEN["rg"]["generate_unsupported"]:
             with self.subTest(uf=c["uf"]):
                 with self.assertRaises(ValueError) as ctx:
-                    stdbr.Rg.generate_for_uf(self._uf(c["uf"]))
+                    stdbr.Rg.generate(self._uf(c["uf"]))
                 self.assertEqual(str(ctx.exception), c["error"])
 
 

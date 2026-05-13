@@ -70,7 +70,7 @@ pub unsafe extern "C" fn stdbr_rg_create_for_uf(
     uf: StdbrState,
     err: *mut StdbrRgError,
 ) -> *mut StdbrRg {
-    match rg::generate_for_uf(uf.into_core()) {
+    match rg::generate(uf.into_core()) {
         Result::Ok(r) => {
             if !err.is_null() {
                 unsafe { *err = StdbrRgError::Ok };
@@ -205,8 +205,42 @@ pub unsafe extern "C" fn stdbr_rg_compute_check_digit(
     }
 }
 
-/// Random valid SP RG. Caller frees with `stdbr_free`.
+/// Random valid RG for the given UF. Returns `NULL` on unsupported UF.
+/// Caller frees with `stdbr_free`.
 #[unsafe(no_mangle)]
-pub extern "C" fn stdbr_rg_generate_sp() -> *mut c_char {
-    to_c_string(rg::generate_sp().as_str().into())
+pub unsafe extern "C" fn stdbr_rg_generate(uf: StdbrState, err: *mut StdbrRgError) -> *mut c_char {
+    match rg::generate(uf.into_core()) {
+        Result::Ok(r) => {
+            if !err.is_null() {
+                unsafe { *err = StdbrRgError::Ok };
+            }
+            to_c_string(r.as_str().into())
+        }
+        Err(e) => {
+            if !err.is_null() {
+                unsafe { *err = StdbrRgError::from_core(&e) };
+            }
+            ptr::null_mut()
+        }
+    }
+}
+
+/// Masked representation. Caller frees with `stdbr_free`. Returns `NULL` if
+/// `rg` is `NULL`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn stdbr_rg_masked(rg: *const StdbrRg) -> *mut c_char {
+    if rg.is_null() {
+        return ptr::null_mut();
+    }
+    to_c_string(unsafe { &*rg }.0.masked())
+}
+
+/// Body without check digit. Caller frees with `stdbr_free`. Returns `NULL`
+/// if `rg` is `NULL`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn stdbr_rg_body(rg: *const StdbrRg) -> *mut c_char {
+    if rg.is_null() {
+        return ptr::null_mut();
+    }
+    to_c_string(unsafe { &*rg }.0.body().into())
 }

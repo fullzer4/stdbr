@@ -8,8 +8,8 @@
 //!
 //! # SP algorithm
 //!
-//! 8-digit body `d1..d8`. Weights `2,3,4,5,6,7,8,9` applied left-to-right.
-//! `sum = Σ d_i * (i+1)` for `i=0..8`. Check digit = `sum mod 11`; remainder
+//! 8-digit body `d1..d8`. Weights `9,8,7,6,5,4,3,2` applied left-to-right.
+//! `sum = Σ d_i * w_i`. Check digit = `sum mod 11`; remainder
 //! `10` is rendered as the ASCII character `'X'`. Canonical formatted form is
 //! `XX.XXX.XXX-X`.
 //!
@@ -31,7 +31,7 @@ const RG_MAX_LEN: usize = 14;
 const SP_BODY_LEN: u8 = 9;
 const SP_FORMATTED_LEN: u8 = 12;
 const SP_BASE_LEN: usize = 8;
-const SP_WEIGHTS: [u32; SP_BASE_LEN] = [2, 3, 4, 5, 6, 7, 8, 9];
+const SP_WEIGHTS: [u32; SP_BASE_LEN] = [9, 8, 7, 6, 5, 4, 3, 2];
 const SP_FORMATTED_DIGIT_POS: [usize; 9] = [0, 1, 3, 4, 5, 7, 8, 9, 11];
 
 const STRUCTURAL_MIN_LEN: u8 = 5;
@@ -117,8 +117,51 @@ impl Rg {
     /// Formatted per the UF mask. For UFs without a known mask, returns the
     /// unformatted body.
     pub fn formatted(&self) -> String {
-        format_with_spec(self.as_str(), uf_spec(self.uf))
-            .unwrap_or_else(|| self.as_str().into())
+        format_with_spec(self.as_str(), uf_spec(self.uf)).unwrap_or_else(|| self.as_str().into())
+    }
+
+    /// Masked representation — shows the first 2 digits and masks the rest.
+    ///
+    /// SP: `"294653272"` → `"29.***.***-*"` (formatted with separators).
+    /// Other UFs: `"1234567"` → `"12*****"` (no separators).
+    pub fn masked(&self) -> String {
+        let s = self.as_str();
+        let spec = uf_spec(self.uf);
+        if spec.has_check_digit && s.len() == SP_BODY_LEN as usize {
+            let mut out = String::with_capacity(SP_FORMATTED_LEN as usize);
+            out.push_str(&s[..2]);
+            out.push('.');
+            out.push_str("***");
+            out.push('.');
+            out.push_str("***");
+            out.push('-');
+            out.push('*');
+            out
+        } else {
+            let mut out = String::with_capacity(s.len());
+            for (i, _) in s.chars().enumerate() {
+                if i < 2 {
+                    out.push(s.as_bytes()[i] as char);
+                } else {
+                    out.push('*');
+                }
+            }
+            out
+        }
+    }
+
+    /// Body without the check digit.
+    ///
+    /// SP: returns the 8-digit base (without DV).
+    /// Other UFs: returns `as_str()` (no DV is identifiable).
+    pub fn body(&self) -> &str {
+        let spec = uf_spec(self.uf);
+        if spec.has_check_digit && self.len as usize == SP_BODY_LEN as usize {
+            // SAFETY: constructors guarantee ASCII content.
+            unsafe { core::str::from_utf8_unchecked(&self.bytes[..SP_BASE_LEN]) }
+        } else {
+            self.as_str()
+        }
     }
 
     /// Check digit when the UF has a verified algorithm. `Some(0..=9)` for
@@ -232,9 +275,7 @@ pub fn parse_strict(raw: &str, uf: State) -> Result<Rg, RgError> {
         }
         parse_unformatted(bytes, spec)?
     } else {
-        if bytes.len() < STRUCTURAL_MIN_LEN as usize
-            || bytes.len() > STRUCTURAL_MAX_LEN as usize
-        {
+        if bytes.len() < STRUCTURAL_MIN_LEN as usize || bytes.len() > STRUCTURAL_MAX_LEN as usize {
             return Err(RgError::InvalidLength);
         }
         parse_unformatted(bytes, spec)?
@@ -249,15 +290,10 @@ pub fn parse_strict(raw: &str, uf: State) -> Result<Rg, RgError> {
 
 /// Generate a random valid RG. SP only; other UFs return
 /// `RgError::UnsupportedUfForGeneration`.
-pub fn generate_for_uf(uf: State) -> Result<Rg, RgError> {
+pub fn generate(uf: State) -> Result<Rg, RgError> {
     if !matches!(uf, State::SP) {
         return Err(RgError::UnsupportedUfForGeneration);
     }
-    Ok(generate_sp())
-}
-
-/// Convenience: generate a random valid SP RG.
-pub fn generate_sp() -> Rg {
     let mut seed = simple_seed();
     let mut digits = [0u8; SP_BASE_LEN];
     for d in &mut digits {
@@ -270,10 +306,8 @@ pub fn generate_sp() -> Rg {
     }
     let dv = sp_check_digit(&digits);
     body[8] = if dv == 10 { b'X' } else { b'0' + dv };
-    Rg::from_body(&body, State::SP)
+    Ok(Rg::from_body(&body, State::SP))
 }
-
-// ─────────────────────────── helpers ───────────────────────────
 
 impl Rg {
     fn from_body(body: &[u8], uf: State) -> Self {
@@ -411,62 +445,85 @@ mod tests {
     use super::*;
     use alloc::string::ToString;
 
-    fn sp_rg(base: [u8; SP_BASE_LEN]) -> Rg {
-        let dv = sp_check_digit(&base);
-        let mut body = [0u8; 9];
-        for (i, &d) in base.iter().enumerate() {
-            body[i] = d + b'0';
-        }
-        body[8] = if dv == 10 { b'X' } else { b'0' + dv };
-        Rg::from_body(&body, State::SP)
+    #[test]
+    fn real_rg_29465327_2() {
+        // Source: bosontreinamentos.com.br
+        assert!(is_valid("294653272", State::SP));
+        assert!(is_valid("29.465.327-2", State::SP));
+        let parsed = parse_strict("294653272", State::SP).unwrap();
+        assert_eq!(parsed.as_str(), "294653272");
+        assert_eq!(parsed.check_digit(), Some(2));
+        assert_eq!(parsed.formatted(), "29.465.327-2");
+        let parsed_fmt = parse_strict("29.465.327-2", State::SP).unwrap();
+        assert_eq!(parsed_fmt, parsed);
+    }
+
+    #[test]
+    fn real_rg_39406714_9() {
+        // Source: dev.to/shadowlik
+        assert!(is_valid("394067149", State::SP));
+        assert!(is_valid("39.406.714-9", State::SP));
+        let parsed = parse_strict("394067149", State::SP).unwrap();
+        assert_eq!(parsed.as_str(), "394067149");
+        assert_eq!(parsed.check_digit(), Some(9));
+        assert_eq!(parsed.formatted(), "39.406.714-9");
+        let parsed_fmt = parse_strict("39.406.714-9", State::SP).unwrap();
+        assert_eq!(parsed_fmt, parsed);
+    }
+
+    #[test]
+    fn compute_check_digit_real_rgs() {
+        assert_eq!(compute_check_digit("29465327", State::SP), Some(2));
+        assert_eq!(compute_check_digit("39406714", State::SP), Some(9));
+    }
+
+    #[test]
+    fn format_real_rgs() {
+        assert_eq!(
+            format_rg("294653272", State::SP),
+            Some("29.465.327-2".into())
+        );
+        assert_eq!(
+            format_rg("394067149", State::SP),
+            Some("39.406.714-9".into())
+        );
     }
 
     #[test]
     fn sp_check_digit_known_values() {
-        // 12345678: sum = 2+6+12+20+30+42+56+72 = 240; 240 mod 11 = 9.
-        assert_eq!(sp_check_digit(&[1, 2, 3, 4, 5, 6, 7, 8]), 9);
+        // 12345678: sum = 9+16+21+24+25+24+21+16 = 156; 156 mod 11 = 2.
+        assert_eq!(sp_check_digit(&[1, 2, 3, 4, 5, 6, 7, 8]), 2);
         // 44444444: sum = 4*44 = 176; 176 mod 11 = 0.
         assert_eq!(sp_check_digit(&[4, 4, 4, 4, 4, 4, 4, 4]), 0);
         // 11111111: sum = 1*44 = 44; 44 mod 11 = 0.
         assert_eq!(sp_check_digit(&[1, 1, 1, 1, 1, 1, 1, 1]), 0);
-        // Find an example whose DV = 10 (rendered 'X').
-        // 00000005: sum = 9*5 = 45; 45 mod 11 = 1. Not 10.
-        // Search a small example: 0,0,0,0,0,0,0,X → need sum mod 11 = 10.
-        // 9*8 = 72; 72 mod 11 = 6. 9*9 = 81; 81 mod 11 = 4.
-        // Try 1,0,0,0,0,0,0,1: 2 + 9 = 11; mod 11 = 0.
-        // Try 1,0,0,0,0,0,0,0: 2; mod 11 = 2.
-        // Try 0,0,0,0,0,0,0,9: 81 mod 11 = 4.
-        // Try 5,0,0,0,0,0,0,0: 10; mod 11 = 10. ✓
-        assert_eq!(sp_check_digit(&[5, 0, 0, 0, 0, 0, 0, 0]), 10);
+        // 60000000: sum = 6*9 = 54; 54 mod 11 = 10 → 'X'.
+        assert_eq!(sp_check_digit(&[6, 0, 0, 0, 0, 0, 0, 0]), 10);
     }
 
     #[test]
     fn is_valid_sp_accepts_valid() {
-        let rg = sp_rg([1, 2, 3, 4, 5, 6, 7, 8]);
-        assert!(is_valid(rg.as_str(), State::SP));
-        assert!(is_valid(&rg.to_string(), State::SP));
+        assert!(is_valid("123456782", State::SP));
+        assert!(is_valid("12.345.678-2", State::SP));
     }
 
     #[test]
     fn is_valid_sp_rejects_wrong_dv() {
-        // 12345678 should give DV=9. Use 8 instead.
-        assert!(!is_valid("123456788", State::SP));
-        assert!(!is_valid("12.345.678-8", State::SP));
+        assert!(!is_valid("123456789", State::SP));
+        assert!(!is_valid("12.345.678-9", State::SP));
+        assert!(!is_valid("294653271", State::SP));
     }
 
     #[test]
     fn is_valid_sp_x_terminator() {
-        let rg = sp_rg([5, 0, 0, 0, 0, 0, 0, 0]);
-        assert_eq!(rg.as_str(), "50000000X");
-        assert!(is_valid(rg.as_str(), State::SP));
-        assert!(is_valid("50.000.000-X", State::SP));
-        assert!(is_valid("50.000.000-x", State::SP));
+        assert!(is_valid("60000000X", State::SP));
+        assert!(is_valid("60.000.000-X", State::SP));
+        assert!(is_valid("60.000.000-x", State::SP));
     }
 
     #[test]
     fn is_valid_sp_lenient_strips_garbage() {
-        let rg = sp_rg([1, 2, 3, 4, 5, 6, 7, 8]);
-        let s = rg.as_str();
+        let s = "123456782";
         let garbage = alloc::format!("{}!{}@{}#{}", &s[0..2], &s[2..5], &s[5..8], &s[8..9]);
         assert!(is_valid(&garbage, State::SP));
     }
@@ -493,32 +550,30 @@ mod tests {
 
     #[test]
     fn structural_other_uf_rejects_letters() {
-        // Lenient strips non-digits (X is not allowed for non-SP UFs); a letter-only
-        // input collapses to an empty string and fails the length check.
         assert!(!is_valid("abcdef", State::RJ));
         assert!(!is_valid("", State::RJ));
     }
 
     #[test]
     fn strict_sp_accepts_unformatted() {
-        let rg = sp_rg([1, 2, 3, 4, 5, 6, 7, 8]);
-        assert!(is_valid_strict(rg.as_str(), State::SP).is_ok());
+        assert!(is_valid_strict("123456782", State::SP).is_ok());
+        assert!(is_valid_strict("294653272", State::SP).is_ok());
     }
 
     #[test]
     fn strict_sp_accepts_formatted() {
-        let rg = sp_rg([1, 2, 3, 4, 5, 6, 7, 8]);
-        assert!(is_valid_strict(&rg.to_string(), State::SP).is_ok());
+        assert!(is_valid_strict("12.345.678-2", State::SP).is_ok());
+        assert!(is_valid_strict("29.465.327-2", State::SP).is_ok());
     }
 
     #[test]
     fn strict_sp_rejects_misplaced_separators() {
         assert_eq!(
-            is_valid_strict("123.45.678-9", State::SP),
+            is_valid_strict("123.45.678-2", State::SP),
             Err(RgError::InvalidFormat)
         );
         assert_eq!(
-            is_valid_strict("12.345.6789-", State::SP),
+            is_valid_strict("12.345.6782-", State::SP),
             Err(RgError::InvalidFormat)
         );
     }
@@ -526,7 +581,7 @@ mod tests {
     #[test]
     fn strict_sp_rejects_garbage() {
         assert_eq!(
-            is_valid_strict("12.345.678!9", State::SP),
+            is_valid_strict("12.345.678!2", State::SP),
             Err(RgError::InvalidFormat)
         );
     }
@@ -534,7 +589,7 @@ mod tests {
     #[test]
     fn strict_sp_rejects_bad_dv() {
         assert_eq!(
-            is_valid_strict("123456788", State::SP),
+            is_valid_strict("123456789", State::SP),
             Err(RgError::InvalidCheckDigit)
         );
     }
@@ -542,7 +597,7 @@ mod tests {
     #[test]
     fn strict_sp_rejects_x_in_middle() {
         assert_eq!(
-            is_valid_strict("1234X6789", State::SP),
+            is_valid_strict("1234X6782", State::SP),
             Err(RgError::InvalidCharacter)
         );
     }
@@ -559,17 +614,16 @@ mod tests {
 
     #[test]
     fn parse_sp_roundtrip() {
-        let rg = sp_rg([1, 2, 3, 4, 5, 6, 7, 8]);
-        let parsed = parse_strict(&rg.to_string(), State::SP).unwrap();
-        assert_eq!(parsed, rg);
-        let parsed_raw = parse_strict(rg.as_str(), State::SP).unwrap();
-        assert_eq!(parsed_raw, rg);
+        let parsed = parse_strict("123456782", State::SP).unwrap();
+        assert_eq!(parsed.as_str(), "123456782");
+        let parsed_fmt = parse_strict("12.345.678-2", State::SP).unwrap();
+        assert_eq!(parsed_fmt, parsed);
     }
 
     #[test]
     fn parse_sp_x_terminator() {
-        let parsed = parse_strict("50.000.000-X", State::SP).unwrap();
-        assert_eq!(parsed.as_str(), "50000000X");
+        let parsed = parse_strict("60.000.000-X", State::SP).unwrap();
+        assert_eq!(parsed.as_str(), "60000000X");
         assert_eq!(parsed.check_digit(), Some(10));
     }
 
@@ -584,20 +638,20 @@ mod tests {
     #[test]
     fn format_sp_inserts_separators() {
         assert_eq!(
-            format_rg("123456789", State::SP),
-            Some("12.345.678-9".into())
+            format_rg("123456782", State::SP),
+            Some("12.345.678-2".into())
         );
         assert_eq!(
-            format_rg("50000000X", State::SP),
-            Some("50.000.000-X".into())
+            format_rg("60000000X", State::SP),
+            Some("60.000.000-X".into())
         );
     }
 
     #[test]
     fn format_sp_passes_through_already_formatted() {
         assert_eq!(
-            format_rg("12.345.678-9", State::SP),
-            Some("12.345.678-9".into())
+            format_rg("12.345.678-2", State::SP),
+            Some("12.345.678-2".into())
         );
     }
 
@@ -614,8 +668,8 @@ mod tests {
 
     #[test]
     fn remove_symbols_sp_keeps_x() {
-        assert_eq!(remove_symbols("50.000.000-X", State::SP), "50000000X");
-        assert_eq!(remove_symbols("50.000.000-x", State::SP), "50000000X");
+        assert_eq!(remove_symbols("60.000.000-X", State::SP), "60000000X");
+        assert_eq!(remove_symbols("60.000.000-x", State::SP), "60000000X");
     }
 
     #[test]
@@ -626,9 +680,9 @@ mod tests {
 
     #[test]
     fn compute_check_digit_sp() {
-        assert_eq!(compute_check_digit("12345678", State::SP), Some(9));
+        assert_eq!(compute_check_digit("12345678", State::SP), Some(2));
         assert_eq!(compute_check_digit("44444444", State::SP), Some(0));
-        assert_eq!(compute_check_digit("50000000", State::SP), Some(10));
+        assert_eq!(compute_check_digit("60000000", State::SP), Some(10));
     }
 
     #[test]
@@ -643,9 +697,9 @@ mod tests {
     }
 
     #[test]
-    fn generate_sp_produces_valid() {
+    fn generate_produces_valid() {
         for _ in 0..100 {
-            let rg = generate_sp();
+            let rg = generate(State::SP).unwrap();
             assert!(is_valid(rg.as_str(), State::SP));
             let parsed = parse_strict(rg.as_str(), State::SP).unwrap();
             assert_eq!(parsed, rg);
@@ -653,31 +707,77 @@ mod tests {
     }
 
     #[test]
-    fn generate_for_uf_sp_ok_others_err() {
-        assert!(generate_for_uf(State::SP).is_ok());
+    fn generate_format_roundtrip() {
+        for _ in 0..100 {
+            let rg = generate(State::SP).unwrap();
+            let formatted = rg.formatted();
+            let parsed = parse_strict(&formatted, State::SP).unwrap();
+            assert_eq!(parsed, rg);
+        }
+    }
+
+    #[test]
+    fn generate_ok_others_err() {
+        assert!(generate(State::SP).is_ok());
         assert_eq!(
-            generate_for_uf(State::RJ),
+            generate(State::RJ),
             Err(RgError::UnsupportedUfForGeneration)
         );
     }
 
     #[test]
+    fn masked_sp_real_rgs() {
+        let rg = parse_strict("294653272", State::SP).unwrap();
+        assert_eq!(rg.masked(), "29.***.***-*");
+        let rg = parse_strict("60000000X", State::SP).unwrap();
+        assert_eq!(rg.masked(), "60.***.***-*");
+    }
+
+    #[test]
+    fn masked_other_uf() {
+        let rg = parse_strict("1234567", State::RJ).unwrap();
+        assert_eq!(rg.masked(), "12*****");
+    }
+
+    #[test]
+    fn masked_generated_sp() {
+        let rg = generate(State::SP).unwrap();
+        let m = rg.masked();
+        assert!(m.starts_with(&rg.as_str()[..2]));
+        assert_eq!(m, alloc::format!("{}.***.***-*", &rg.as_str()[..2]));
+    }
+
+    #[test]
+    fn body_sp_real_rgs() {
+        let rg = parse_strict("294653272", State::SP).unwrap();
+        assert_eq!(rg.body(), "29465327");
+        let rg = parse_strict("60000000X", State::SP).unwrap();
+        assert_eq!(rg.body(), "60000000");
+    }
+
+    #[test]
+    fn body_other_uf_returns_full() {
+        let rg = parse_strict("1234567", State::RJ).unwrap();
+        assert_eq!(rg.body(), "1234567");
+    }
+
+    #[test]
     fn rg_is_copy() {
-        let rg = sp_rg([1, 2, 3, 4, 5, 6, 7, 8]);
+        let rg = generate(State::SP).unwrap();
         let copy = rg;
         assert_eq!(rg, copy);
     }
 
     #[test]
     fn rg_as_ref_str() {
-        let rg = sp_rg([1, 2, 3, 4, 5, 6, 7, 8]);
+        let rg = generate(State::SP).unwrap();
         let r: &str = rg.as_ref();
         assert_eq!(r, rg.as_str());
     }
 
     #[test]
     fn debug_format_includes_uf() {
-        let rg = sp_rg([1, 2, 3, 4, 5, 6, 7, 8]);
+        let rg = parse_strict("294653272", State::SP).unwrap();
         let dbg = alloc::format!("{rg:?}");
         assert!(dbg.starts_with("Rg(SP, "));
         assert!(dbg.ends_with(')'));
@@ -685,8 +785,8 @@ mod tests {
 
     #[test]
     fn display_uses_formatted() {
-        let rg = sp_rg([1, 2, 3, 4, 5, 6, 7, 8]);
-        assert_eq!(rg.to_string(), "12.345.678-9");
+        let rg = parse_strict("294653272", State::SP).unwrap();
+        assert_eq!(rg.to_string(), "29.465.327-2");
     }
 
     #[test]

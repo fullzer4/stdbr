@@ -343,11 +343,12 @@ fn rg_parse() {
     for case in cases.as_array().unwrap() {
         let input = case["input"].as_str().unwrap();
         let uf = parse_uf(case["uf"].as_str().unwrap());
-        let parsed = rg::parse_strict(input, uf).unwrap_or_else(|e| {
-            panic!("parse_strict({input}, {}) failed: {e}", uf.abbreviation())
-        });
+        let parsed = rg::parse_strict(input, uf)
+            .unwrap_or_else(|e| panic!("parse_strict({input}, {}) failed: {e}", uf.abbreviation()));
         assert_eq!(parsed.as_str(), case["digits_only"].as_str().unwrap());
         assert_eq!(parsed.formatted(), case["formatted"].as_str().unwrap());
+        assert_eq!(parsed.masked(), case["masked"].as_str().unwrap());
+        assert_eq!(parsed.body(), case["body"].as_str().unwrap());
         assert_eq!(parsed.uf().abbreviation(), case["uf_out"].as_str().unwrap());
         let expected_cd = case["check_digit"].as_u64().map(|v| v as u8);
         assert_eq!(parsed.check_digit(), expected_cd);
@@ -437,7 +438,7 @@ fn rg_compute_check_digit() {
 #[test]
 fn rg_generate_roundtrip() {
     let gen_uf = parse_uf(golden()["rg"]["generate"]["uf"].as_str().unwrap());
-    let rg_val = rg::generate_for_uf(gen_uf).unwrap();
+    let rg_val = rg::generate(gen_uf).unwrap();
     assert!(rg::is_valid(rg_val.as_str(), gen_uf));
     let parsed = rg::parse_strict(rg_val.as_str(), gen_uf).unwrap();
     assert_eq!(parsed.as_str(), rg_val.as_str());
@@ -449,7 +450,7 @@ fn rg_generate_unsupported() {
     for case in cases.as_array().unwrap() {
         let uf = parse_uf(case["uf"].as_str().unwrap());
         let expected = case["error"].as_str().unwrap();
-        let err = rg::generate_for_uf(uf).unwrap_err();
+        let err = rg::generate(uf).unwrap_err();
         assert_eq!(err.to_string(), expected);
     }
 }

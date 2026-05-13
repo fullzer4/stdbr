@@ -21,10 +21,10 @@ impl Rg {
         Ok(Self { inner })
     }
 
-    /// Generate a random valid RG. Currently SP only; other UFs raise ValueError.
+    /// Generate a random valid RG. Currently SP only; other UFs raise `ValueError`.
     #[staticmethod]
-    fn generate_for_uf(uf: State) -> PyResult<Self> {
-        core_rg::generate_for_uf(uf.into())
+    fn generate(uf: State) -> PyResult<Self> {
+        core_rg::generate(uf.into())
             .map(|inner| Self { inner })
             .map_err(|e| rg_err(&e))
     }
@@ -37,6 +37,16 @@ impl Rg {
     /// Formatted per the UF mask.
     fn formatted(&self) -> String {
         self.inner.formatted()
+    }
+
+    /// Masked representation — first 2 digits visible, rest masked.
+    fn masked(&self) -> String {
+        self.inner.masked()
+    }
+
+    /// Body without check digit (SP: 8-digit base; others: full string).
+    fn body(&self) -> &str {
+        self.inner.body()
     }
 
     #[getter]
@@ -54,7 +64,11 @@ impl Rg {
     }
 
     fn __repr__(&self) -> String {
-        format!("Rg('{}', {})", self.inner.formatted(), self.inner.uf().abbreviation())
+        format!(
+            "Rg('{}', {})",
+            self.inner.formatted(),
+            self.inner.uf().abbreviation()
+        )
     }
 }
 
@@ -84,8 +98,10 @@ fn rg_compute_check_digit(base: &str, uf: State) -> Option<u8> {
 }
 
 #[pyfunction]
-fn rg_generate_sp() -> String {
-    core_rg::generate_sp().as_str().to_owned()
+fn rg_generate(uf: State) -> PyResult<String> {
+    core_rg::generate(uf.into())
+        .map(|rg| rg.as_str().to_owned())
+        .map_err(|e| rg_err(&e))
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -95,6 +111,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(rg_format, m)?)?;
     m.add_function(wrap_pyfunction!(rg_remove_symbols, m)?)?;
     m.add_function(wrap_pyfunction!(rg_compute_check_digit, m)?)?;
-    m.add_function(wrap_pyfunction!(rg_generate_sp, m)?)?;
+    m.add_function(wrap_pyfunction!(rg_generate, m)?)?;
     Ok(())
 }
