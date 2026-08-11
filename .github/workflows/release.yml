@@ -205,7 +205,10 @@ jobs:
           if-no-files-found: error
 
   publish-ffi:
-    needs: build-ffi
+    needs:
+      - release-please
+      - build-ffi
+    if: needs.release-please.outputs.release_created
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
