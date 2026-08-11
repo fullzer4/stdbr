@@ -58,11 +58,6 @@
           "path": "bindings/python/pyproject.toml",
           "jsonpath": "$.project.version"
         },
-        {
-          "type": "toml",
-          "path": "bindings/ffi-c/Cargo.toml",
-          "jsonpath": "$.package.version"
-        }
       ]
     }
   }
