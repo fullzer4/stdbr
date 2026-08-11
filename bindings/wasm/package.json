@@ -3,5 +3,11 @@
   "version": "0.0.1",
   "main": "stdbr_wasm.js",
   "types": "stdbr_wasm.d.ts",
-  "license": "MIT OR Apache-2.0"
+  "license": "MIT OR Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "pkg"
+  ]
 }

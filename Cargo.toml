@@ -8,6 +8,12 @@ version = "0.0.1"
 edition = "2024"
 rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
+description = "Standard library for Brazil"
+repository = "https://github.com/fullzer4/stdbr"
+homepage = "https://github.com/fullzer4/stdbr"
+readme = "README.md"
+keywords = ["brazil", "cpf", "cnpj", "cep", "validation"]
+categories = ["localization", "text-processing", "wasm"]
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }

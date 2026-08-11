@@ -1,0 +1,69 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "rust",
+      "package-name": "stdbr",
+      "include-component-in-tag": false,
+      "include-v-in-tag": true,
+      "changelog-path": "CHANGELOG.md",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "prerelease": true,
+      "prerelease-type": "alpha",
+      "versioning-strategy": "prerelease",
+      "plugins": ["cargo-workspace"],
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "bindings/nodejs/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "bindings/nodejs/npm/darwin-arm64/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "bindings/nodejs/npm/darwin-x64/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "bindings/nodejs/npm/linux-arm64-gnu/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "bindings/nodejs/npm/linux-x64-gnu/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "bindings/nodejs/npm/linux-x64-musl/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "bindings/nodejs/npm/win32-x64-msvc/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "bindings/wasm/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "toml",
+          "path": "bindings/python/pyproject.toml",
+          "jsonpath": "$.project.version"
+        },
+        {
+          "type": "toml",
+          "path": "bindings/ffi-c/Cargo.toml",
+          "jsonpath": "$.package.version"
+        }
+      ]
+    }
+  }
+}

@@ -69,3 +69,27 @@ stdbr/
   flake.nix                # Nix dev environment
   MODULE.bazel             # Bazel module config
 ```
+
+## Commit convention
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) and [release-please](https://github.com/googleapis/release-please) to automate versioning and changelogs.
+
+Use the following prefixes in your commit or squash-merge messages:
+
+| Prefix | Effect on version | Example |
+|--------|-------------------|---------|
+| `fix:` | patch bump | `fix(cpf): reject invalid check digits` |
+| `feat:` | minor bump | `feat(cep): add state lookup` |
+| `feat!:` / `BREAKING CHANGE:` | major bump | `feat!: change Cnpj API surface` |
+| `chore:`, `docs:`, `test:` | no release | `chore(deps): update napi-rs` |
+
+Always squash-merge pull requests and make sure the final commit message follows the convention.
+
+## Release workflow
+
+1. Merges to `main` trigger `release-please`, which opens a release PR.
+2. The release PR bumps `Cargo.toml`, `package.json`, `pyproject.toml`, and updates `CHANGELOG.md`.
+3. Merging the release PR creates a git tag and GitHub Release.
+4. The `publish.yml` workflow then publishes to crates.io, npm, PyPI, and attaches C/C++ artifacts to the GitHub Release.
+
+For pre-releases, push changes to `alpha`, `beta`, or `next` branches.
