@@ -28,6 +28,8 @@ cbindgen(
     lockfile = "//:Cargo.lock",
     manifest = "//:Cargo.toml",
     workspace_srcs = [
+        "//:Cargo.toml",
+        "//:src/lib.rs",
         "//core:Cargo.toml",
         ":Cargo.toml",
         "//bindings/nodejs:Cargo.toml",
