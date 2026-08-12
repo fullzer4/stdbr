@@ -16,7 +16,6 @@ dist/
 *.dylib
 
 core/tests/data/
-tests/parity/golden.json
 
 .claude/
 .vscode/
