@@ -1,6 +1,6 @@
 {
   "name": "@stdbr/wasm",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "main": "stdbr_wasm.js",
   "types": "stdbr_wasm.d.ts",
   "license": "MIT OR Apache-2.0",
