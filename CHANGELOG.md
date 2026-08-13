@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.3](https://github.com/fullzer4/stdbr/compare/v0.0.2...v0.0.3) (2026-08-13)
+
+
+### Bug Fixes
+
+* **release:** correct PYPI_TOKEN conditional ([78bab5e](https://github.com/fullzer4/stdbr/commit/78bab5e7140f89b3b81e6d5c489a82b32eb3d325))
+* **release:** cross-compilation targets, wasm-pack action, python readme and pypi token guard ([efdeae9](https://github.com/fullzer4/stdbr/commit/efdeae9277acfcdd52f30ed23bfa9d1880b6b398))
+* **release:** cross-compilation targets, wasm-pack action, python readme and pypi token guard ([da10ce7](https://github.com/fullzer4/stdbr/commit/da10ce7fa1dccfa14760ba9e51695c3e51ba9003))
+* **release:** map napi artifact platform names to npm package names ([b82735e](https://github.com/fullzer4/stdbr/commit/b82735e3952e34c9eed030302a5e2688e48711de))
+* **release:** use env-based guard for PYPI_TOKEN instead of secrets in if ([b2c6741](https://github.com/fullzer4/stdbr/commit/b2c6741165f17bd43e09b2773001cc7a839ffaa2))
+* **release:** workflow corrections ([af9cfe4](https://github.com/fullzer4/stdbr/commit/af9cfe46d604590a39bbc34ccd38ae22b8447e58))
+
 ## [0.0.2](https://github.com/fullzer4/stdbr/compare/v0.0.1...v0.0.2) (2026-08-13)
 
 
