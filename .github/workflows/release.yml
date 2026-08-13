@@ -147,29 +147,9 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  check-pypi-token:
+  publish-python:
     needs: release-please
     if: needs.release-please.outputs.release_created
-    runs-on: ubuntu-latest
-    outputs:
-      has_token: ${{ steps.check.outputs.has_token }}
-    steps:
-      - id: check
-        env:
-          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-        run: |
-          if [ -n "$PYPI_TOKEN" ]; then
-            echo "has_token=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_token=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::PYPI_TOKEN not configured; Python publish will be skipped."
-          fi
-
-  publish-python:
-    needs:
-      - release-please
-      - check-pypi-token
-    if: needs.release-please.outputs.release_created && needs.check-pypi-token.outputs.has_token == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
