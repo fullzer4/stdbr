@@ -122,7 +122,7 @@ jobs:
         run: |
           for pkg in npm/*/package.json; do
             dir=$(dirname "$pkg")
-            npm publish "$dir" --access public
+            npm publish "./$dir" --access public
           done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
