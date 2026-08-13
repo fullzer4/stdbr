@@ -25,12 +25,12 @@
     "prepublishOnly": "napi prepublish"
   },
   "optionalDependencies": {
-    "@stdbr/stdbr-linux-x64-gnu": "0.0.1",
-    "@stdbr/stdbr-linux-x64-musl": "0.0.1",
-    "@stdbr/stdbr-linux-arm64-gnu": "0.0.1",
-    "@stdbr/stdbr-darwin-x64": "0.0.1",
-    "@stdbr/stdbr-darwin-arm64": "0.0.1",
-    "@stdbr/stdbr-win32-x64-msvc": "0.0.1"
+    "@stdbr/stdbr-linux-x64-gnu": "0.0.2",
+    "@stdbr/stdbr-linux-x64-musl": "0.0.2",
+    "@stdbr/stdbr-linux-arm64-gnu": "0.0.2",
+    "@stdbr/stdbr-darwin-x64": "0.0.2",
+    "@stdbr/stdbr-darwin-arm64": "0.0.2",
+    "@stdbr/stdbr-win32-x64-msvc": "0.0.2"
   },
   "devDependencies": {
     "@napi-rs/cli": "^2"
