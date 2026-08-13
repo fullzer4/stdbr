@@ -156,8 +156,10 @@ jobs:
 
   publish-python:
     needs: release-please
-    if: needs.release-please.outputs.release_created && secrets.PYPI_TOKEN != ''
+    if: needs.release-please.outputs.release_created
     runs-on: ${{ matrix.os }}
+    env:
+      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -165,7 +167,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: PyO3/maturin-action@v1
-        if: secrets.PYPI_TOKEN != ''
+        if: env.PYPI_TOKEN != ''
         with:
           command: publish
           args: --non-interactive
