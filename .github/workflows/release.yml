@@ -156,7 +156,7 @@ jobs:
 
   publish-python:
     needs: release-please
-    if: needs.release-please.outputs.release_created
+    if: needs.release-please.outputs.release_created && secrets.PYPI_TOKEN != ''
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
