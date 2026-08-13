@@ -9,7 +9,7 @@
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
       "prerelease": true,
-      "prerelease-type": "alpha",
+      "prerelease-type": "next",
       "versioning-strategy": "prerelease",
       "plugins": ["cargo-workspace"],
       "extra-files": [
