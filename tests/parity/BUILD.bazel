@@ -3,12 +3,10 @@ load("@bazel_skylib//rules:write_file.bzl", "write_file")
 
 GOLDEN_ENV = {"GOLDEN_JSON": "$(rootpath :gen_golden)"}
 
-genrule(
+filegroup(
     name = "gen_golden",
-    outs = ["golden_generated.json"],
-    cmd = "$(location //tools/parity_gen) > $@",
-    tools = ["//tools/parity_gen"],
-    tags = ["no-sandbox", "local", "requires-network"],
+    srcs = ["golden.json"],
+    visibility = ["//visibility:public"],
 )
 
 rust_test(

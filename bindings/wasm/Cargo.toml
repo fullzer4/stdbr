@@ -1,9 +1,15 @@
 [package]
 name = "stdbr-wasm"
-version.workspace = true
+version = "0.0.1"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+description.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [lib]
 crate-type = ["cdylib"]

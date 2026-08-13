@@ -1,3 +1,19 @@
+[package]
+name = "stdbr"
+version = "0.0.1"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+stdbr-core = { path = "core" }
+
 [workspace]
 resolver = "2"
 members = ["core", "bindings/ffi-c", "bindings/nodejs", "bindings/python", "bindings/wasm", "tools/parity_gen"]
@@ -8,6 +24,12 @@ version = "0.0.1"
 edition = "2024"
 rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
+description = "Standard library for Brazil"
+repository = "https://github.com/fullzer4/stdbr"
+homepage = "https://github.com/fullzer4/stdbr"
+readme = "README.md"
+keywords = ["brazil", "cpf", "cnpj", "cep", "validation"]
+categories = ["localization", "text-processing", "wasm"]
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }

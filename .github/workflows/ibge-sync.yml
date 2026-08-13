@@ -5,6 +5,10 @@ on:
     - cron: "0 6 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   ibge-sync:
     runs-on: ubuntu-latest
@@ -16,32 +20,25 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: IBGE sync test
+        id: sync_test
+        continue-on-error: true
         run: nix develop --command bazel test //tests/parity:parity_rust
 
-      - name: Open issue if out of sync
-        if: failure()
-        uses: actions/github-script@v7
+      - name: Regenerate municipality data
+        if: steps.sync_test.outcome == 'failure'
+        run: nix develop --command cargo run -p parity-gen > /tmp/municipio.rs
+
+      - name: Create Pull Request if out of sync
+        if: steps.sync_test.outcome == 'failure'
+        uses: peter-evans/create-pull-request@v6
         with:
-          script: |
-            const title = `IBGE municipality data out of sync (${new Date().toISOString().split('T')[0]})`;
-            const existing = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'ibge-sync',
-            });
-            if (existing.data.length === 0) {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title,
-                body: [
-                  '## IBGE municipality data is out of sync',
-                  '',
-                  'The daily sync check detected differences between `core/src/municipio.rs` and the live IBGE API.',
-                  '',
-                  `Workflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-                ].join('\n'),
-                labels: ['ibge-sync'],
-              });
-            }
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(ibge): sync municipalities"
+          title: "chore(ibge): sync municipalities"
+          body: |
+            Automated IBGE sync detected differences between `core/src/municipio.rs` and the live IBGE API.
+
+            This PR regenerates the municipality data. Please review and merge to include it in the next release.
+          branch: chore/ibge-sync
+          labels: ibge-sync
+          add-paths: core/src/municipio.rs

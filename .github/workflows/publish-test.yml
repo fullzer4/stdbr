@@ -1,0 +1,77 @@
+name: Publish Test (Dry-Run + Test Registries)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+
+jobs:
+  test-crates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo publish -p stdbr-core --dry-run
+
+  test-nodejs:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - run: npm ci
+        working-directory: bindings/nodejs
+      - run: npx napi build --platform --release --target ${{ matrix.target }}
+        working-directory: bindings/nodejs
+      - run: npm publish --dry-run
+        working-directory: bindings/nodejs
+
+  test-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustwasm/wasm-pack-action@v0.0.4
+      - run: wasm-pack build --release --target web
+        working-directory: bindings/wasm
+      - run: npm publish --dry-run
+        working-directory: bindings/wasm/pkg
+
+  test-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release
+          working-directory: bindings/python
+
+  test-ffi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: cargo-bins/cargo-binstall@main
+      - run: cargo binstall cbindgen -y
+      - run: cargo build --release -p stdbr-ffi
+      - run: cbindgen --crate stdbr-ffi --output stdbr.h
+      - run: tar czf stdbr-ffi-test.tar.gz target/release/libstdbr.* stdbr.h

@@ -16,6 +16,14 @@
     }
   },
   "license": "MIT OR Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "napi build --platform --release",
+    "artifacts": "napi artifacts",
+    "prepublishOnly": "napi prepublish"
+  },
   "optionalDependencies": {
     "@stdbr/stdbr-linux-x64-gnu": "0.0.1",
     "@stdbr/stdbr-linux-x64-musl": "0.0.1",
