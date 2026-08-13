@@ -110,12 +110,12 @@ jobs:
             [ -e "$f" ] || continue
             target=$(basename "$f" | sed 's/^stdbr\.//' | sed 's/\.node$//')
             case "$target" in
-              x86_64-unknown-linux-gnu)    dest=npm/linux-x64-gnu/stdbr.linux-x64-gnu.node ;;
-              x86_64-unknown-linux-musl)   dest=npm/linux-x64-musl/stdbr.linux-x64-musl.node ;;
-              aarch64-unknown-linux-gnu) dest=npm/linux-arm64-gnu/stdbr.linux-arm64-gnu.node ;;
-              x86_64-apple-darwin)         dest=npm/darwin-x64/stdbr.darwin-x64.node ;;
-              aarch64-apple-darwin)        dest=npm/darwin-arm64/stdbr.darwin-arm64.node ;;
-              x86_64-pc-windows-msvc)      dest=npm/win32-x64-msvc/stdbr.win32-x64-msvc.node ;;
+              linux-x64-gnu)    dest=npm/linux-x64-gnu/stdbr.linux-x64-gnu.node ;;
+              linux-x64-musl)   dest=npm/linux-x64-musl/stdbr.linux-x64-musl.node ;;
+              linux-arm64-gnu)  dest=npm/linux-arm64-gnu/stdbr.linux-arm64-gnu.node ;;
+              darwin-x64)       dest=npm/darwin-x64/stdbr.darwin-x64.node ;;
+              darwin-arm64)     dest=npm/darwin-arm64/stdbr.darwin-arm64.node ;;
+              win32-x64-msvc)   dest=npm/win32-x64-msvc/stdbr.win32-x64-msvc.node ;;
               *) echo "Unknown target: $target"; exit 1 ;;
             esac
             cp "$f" "$dest"
