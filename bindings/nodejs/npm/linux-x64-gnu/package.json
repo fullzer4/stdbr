@@ -1,9 +1,15 @@
 {
   "name": "@stdbr/stdbr-linux-x64-gnu",
-  "version": "0.0.1",
-  "os": ["linux"],
-  "cpu": ["x64"],
-  "libc": ["glibc"],
+  "version": "0.0.2",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "libc": [
+    "glibc"
+  ],
   "main": "stdbr.linux-x64-gnu.node",
   "license": "MIT OR Apache-2.0",
   "engines": {

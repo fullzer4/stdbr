@@ -267,7 +267,7 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
 name = "parity-gen"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "serde_json",
  "stdbr-core",
@@ -513,28 +513,28 @@ checksum = "703d5c7ef118737c72f1af64ad2f6f8c5e1921f818cdcb97b8fe6fc69bf66214"
 
 [[package]]
 name = "stdbr"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "stdbr-core",
 ]
 
 [[package]]
 name = "stdbr-core"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "stdbr-ffi"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "stdbr-core",
 ]
 
 [[package]]
 name = "stdbr-napi"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "napi",
  "napi-build",
@@ -544,7 +544,7 @@ dependencies = [
 
 [[package]]
 name = "stdbr-python"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "pyo3",
  "stdbr-core",
@@ -552,7 +552,7 @@ dependencies = [
 
 [[package]]
 name = "stdbr-wasm"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "stdbr-core",
  "wasm-bindgen",
