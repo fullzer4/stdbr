@@ -1,9 +1,15 @@
 {
   "name": "@stdbr/stdbr-linux-x64-musl",
-  "version": "0.0.1",
-  "os": ["linux"],
-  "cpu": ["x64"],
-  "libc": ["musl"],
+  "version": "0.0.2",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "libc": [
+    "musl"
+  ],
   "main": "stdbr.linux-x64-musl.node",
   "license": "MIT OR Apache-2.0",
   "engines": {

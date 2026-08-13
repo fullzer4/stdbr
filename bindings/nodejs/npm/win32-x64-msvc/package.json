@@ -1,8 +1,12 @@
 {
   "name": "@stdbr/stdbr-win32-x64-msvc",
-  "version": "0.0.1",
-  "os": ["win32"],
-  "cpu": ["x64"],
+  "version": "0.0.2",
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
   "main": "stdbr.win32-x64-msvc.node",
   "license": "MIT OR Apache-2.0",
   "engines": {
