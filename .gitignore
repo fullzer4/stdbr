@@ -19,3 +19,6 @@ core/tests/data/
 
 .claude/
 .vscode/
+
+# Local secrets (never commit)
+tokens.md
