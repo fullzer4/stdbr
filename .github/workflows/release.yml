@@ -162,28 +162,20 @@ jobs:
     needs: release-please
     if: needs.release-please.outputs.release_created
     runs-on: ${{ matrix.os }}
-    env:
-      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+    environment: pypi
+    permissions:
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
-      - name: Check PYPI_TOKEN
-        shell: bash
-        run: |
-          if [ -z "$PYPI_TOKEN" ]; then
-            echo "::error::PYPI_TOKEN secret is not set; skipping PyPI publish"
-            exit 1
-          fi
       - uses: PyO3/maturin-action@v1
         with:
           command: publish
           args: --non-interactive
           working-directory: bindings/python
-        env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
 
   build-ffi:
     needs: release-please
