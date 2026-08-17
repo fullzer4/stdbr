@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.6](https://github.com/fullzer4/stdbr/compare/v0.0.5...v0.0.6) (2026-08-17)
+
+
+### Bug Fixes
+
+* **release:** publish stdbr crate, fix npm platform publish path and fail on missing PYPI_TOKEN ([62f710d](https://github.com/fullzer4/stdbr/commit/62f710d009ab86156febc81f05305a37376c9414))
+* **release:** use PyPI trusted publishing (OIDC) instead of API token ([f89ab65](https://github.com/fullzer4/stdbr/commit/f89ab65201de1e6ac630b11503a45d72e10781af))
+
 ## [0.0.5](https://github.com/fullzer4/stdbr/compare/v0.0.4...v0.0.5) (2026-08-13)
 
 
