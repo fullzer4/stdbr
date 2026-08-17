@@ -12,7 +12,7 @@ keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
-stdbr-core = { path = "core" }
+stdbr-core = { path = "core", version = "0.0.5" }
 
 [workspace]
 resolver = "2"
