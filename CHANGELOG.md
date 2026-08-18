@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.0](https://github.com/fullzer4/stdbr/compare/v0.0.7...v0.1.0) (2026-08-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **nodejs:** rename npm packages from @stdbr/* scope to unscoped stdbr*
+
+### Bug Fixes
+
+* **nodejs:** rename npm packages from @stdbr/* scope to unscoped stdbr* ([ecc4bf2](https://github.com/fullzer4/stdbr/commit/ecc4bf2f3f6993117dfe4c385b0f461dc4a3afc7))
+
 ## [0.0.7](https://github.com/fullzer4/stdbr/compare/v0.0.6...v0.0.7) (2026-08-18)
 
 
