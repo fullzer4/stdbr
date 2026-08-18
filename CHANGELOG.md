@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/fullzer4/stdbr/compare/v0.2.0...v0.3.0) (2026-08-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **nodejs:** restore @stdbr scoped npm package names ([#36](https://github.com/fullzer4/stdbr/issues/36))
+
+### Bug Fixes
+
+* **nodejs:** restore [@stdbr](https://github.com/stdbr) scoped npm package names ([#36](https://github.com/fullzer4/stdbr/issues/36)) ([2d19b45](https://github.com/fullzer4/stdbr/commit/2d19b459787e6a134f85c17d35eba8725fc4cf5f))
+
 ## [0.2.0](https://github.com/fullzer4/stdbr/compare/v0.1.0...v0.2.0) (2026-08-18)
 
 
