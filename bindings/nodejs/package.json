@@ -22,7 +22,7 @@
   "scripts": {
     "build": "napi build --platform --release",
     "artifacts": "napi artifacts",
-    "prepublishOnly": "napi prepublish"
+    "prepublishOnly": "napi prepublish --tag-style npm --skip-gh-release --skip-optional-publish"
   },
   "optionalDependencies": {
     "@stdbr/stdbr-linux-x64-gnu": "0.0.2",
