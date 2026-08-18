@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/fullzer4/stdbr/compare/v0.3.0...v0.3.1) (2026-08-18)
+
+
+### Bug Fixes
+
+* **nodejs:** let napi prepublish handle platform publishes ([6ac6829](https://github.com/fullzer4/stdbr/commit/6ac682991b5f225ce2587ef20352595f6117e6ec))
+
 ## [0.3.0](https://github.com/fullzer4/stdbr/compare/v0.2.0...v0.3.0) (2026-08-18)
 
 
