@@ -1,5 +1,5 @@
 {
-  "name": "@stdbr/stdbr-win32-x64-msvc",
+  "name": "stdbr-win32-x64-msvc",
   "version": "0.0.7",
   "os": [
     "win32"

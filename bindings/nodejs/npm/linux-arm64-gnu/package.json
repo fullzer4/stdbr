@@ -1,5 +1,5 @@
 {
-  "name": "@stdbr/stdbr-linux-arm64-gnu",
+  "name": "stdbr-linux-arm64-gnu",
   "version": "0.0.7",
   "os": [
     "linux"

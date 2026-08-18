@@ -1,5 +1,5 @@
 {
-  "name": "@stdbr/stdbr-darwin-arm64",
+  "name": "stdbr-darwin-arm64",
   "version": "0.0.7",
   "os": [
     "darwin"

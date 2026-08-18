@@ -1,5 +1,5 @@
 {
-  "name": "@stdbr/stdbr-linux-x64-musl",
+  "name": "stdbr-linux-x64-musl",
   "version": "0.0.7",
   "os": [
     "linux"
