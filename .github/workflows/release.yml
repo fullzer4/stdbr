@@ -124,19 +124,7 @@ jobs:
             esac
             cp "$f" "$dest"
           done
-      - name: Publish platform packages
-        working-directory: bindings/nodejs
-        shell: bash
-        run: |
-          failed=0
-          for pkg in npm/*/package.json; do
-            dir=$(dirname "$pkg")
-            npm publish "./$dir" --access public || failed=1
-          done
-          [ "$failed" -eq 0 ]
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Publish main package
+      - name: Publish main package (publishes platform packages via napi prepublish)
         working-directory: bindings/nodejs
         run: npm publish --access public
         env:
