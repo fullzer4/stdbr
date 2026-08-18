@@ -14,5 +14,8 @@
   "license": "MIT OR Apache-2.0",
   "engines": {
     "node": ">= 10"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
