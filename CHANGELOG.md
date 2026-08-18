@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.7](https://github.com/fullzer4/stdbr/compare/v0.0.6...v0.0.7) (2026-08-18)
+
+
+### Bug Fixes
+
+* **release:** add --skip-existing to maturin publish to tolerate duplicate sdist uploads across matrix jobs ([78aec21](https://github.com/fullzer4/stdbr/commit/78aec21e5f508465618f111566bf53c1e346ebc4))
+
 ## [0.0.6](https://github.com/fullzer4/stdbr/compare/v0.0.5...v0.0.6) (2026-08-17)
 
 

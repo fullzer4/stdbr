@@ -1,6 +1,6 @@
 [package]
 name = "stdbr"
-version = "0.0.6"
+version = "0.0.7"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -12,7 +12,7 @@ keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
-stdbr-core = { path = "core", version = "0.0.6" }
+stdbr-core = { path = "core", version = "0.0.7" }
 
 [workspace]
 resolver = "2"
