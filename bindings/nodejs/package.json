@@ -1,6 +1,6 @@
 {
   "name": "@stdbr/stdbr",
-  "version": "0.0.6",
+  "version": "0.3.1",
   "type": "module",
   "main": "index.js",
   "types": "index.d.ts",
@@ -22,7 +22,7 @@
   "scripts": {
     "build": "napi build --platform --release",
     "artifacts": "napi artifacts",
-    "prepublishOnly": "napi prepublish"
+    "prepublishOnly": "napi prepublish --tagstyle npm --skip-gh-release"
   },
   "optionalDependencies": {
     "@stdbr/stdbr-linux-x64-gnu": "0.0.2",

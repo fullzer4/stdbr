@@ -1,6 +1,6 @@
 {
   "name": "@stdbr/stdbr-win32-x64-msvc",
-  "version": "0.0.6",
+  "version": "0.3.1",
   "os": [
     "win32"
   ],
@@ -11,5 +11,8 @@
   "license": "MIT OR Apache-2.0",
   "engines": {
     "node": ">= 10"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

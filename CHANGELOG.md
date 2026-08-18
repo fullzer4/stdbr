@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.3.1](https://github.com/fullzer4/stdbr/compare/v0.3.0...v0.3.1) (2026-08-18)
+
+
+### Bug Fixes
+
+* **nodejs:** let napi prepublish handle platform publishes ([6ac6829](https://github.com/fullzer4/stdbr/commit/6ac682991b5f225ce2587ef20352595f6117e6ec))
+
+## [0.3.0](https://github.com/fullzer4/stdbr/compare/v0.2.0...v0.3.0) (2026-08-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **nodejs:** restore @stdbr scoped npm package names ([#36](https://github.com/fullzer4/stdbr/issues/36))
+
+### Bug Fixes
+
+* **nodejs:** restore [@stdbr](https://github.com/stdbr) scoped npm package names ([#36](https://github.com/fullzer4/stdbr/issues/36)) ([2d19b45](https://github.com/fullzer4/stdbr/commit/2d19b459787e6a134f85c17d35eba8725fc4cf5f))
+
+## [0.2.0](https://github.com/fullzer4/stdbr/compare/v0.1.0...v0.2.0) (2026-08-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **nodejs:** restore @stdbr scoped npm package names
+
+### Bug Fixes
+
+* **nodejs:** restore [@stdbr](https://github.com/stdbr) scoped npm package names ([004d984](https://github.com/fullzer4/stdbr/commit/004d984f68c106dfa7a917c773726b890b316ded))
+
+## [0.1.0](https://github.com/fullzer4/stdbr/compare/v0.0.7...v0.1.0) (2026-08-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **nodejs:** rename npm packages from @stdbr/* scope to unscoped stdbr*
+
+### Bug Fixes
+
+* **nodejs:** rename npm packages from @stdbr/* scope to unscoped stdbr* ([ecc4bf2](https://github.com/fullzer4/stdbr/commit/ecc4bf2f3f6993117dfe4c385b0f461dc4a3afc7))
+
+## [0.0.7](https://github.com/fullzer4/stdbr/compare/v0.0.6...v0.0.7) (2026-08-18)
+
+
+### Bug Fixes
+
+* **release:** add --skip-existing to maturin publish to tolerate duplicate sdist uploads across matrix jobs ([78aec21](https://github.com/fullzer4/stdbr/commit/78aec21e5f508465618f111566bf53c1e346ebc4))
+
 ## [0.0.6](https://github.com/fullzer4/stdbr/compare/v0.0.5...v0.0.6) (2026-08-17)
 
 
