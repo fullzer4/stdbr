@@ -1,0 +1,8 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+rust_binary(
+    name = "stdbr-bench",
+    srcs = ["main.rs"],
+    tags = ["manual"],
+    deps = ["//core:stdbr-core"],
+)

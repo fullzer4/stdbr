@@ -13,8 +13,7 @@ pub struct StdbrMunicipioList {
     items: Vec<&'static core_mun::Municipio>,
 }
 
-/// Find a municipality by its IBGE code. Returns `NULL` if not found.
-/// Caller frees with `stdbr_municipio_destroy`.
+/// Finds a municipio, or `NULL` if absent. Caller destroys it with `stdbr_municipio_destroy`.
 #[unsafe(no_mangle)]
 pub extern "C" fn stdbr_municipio_from_ibge_code(code: u32) -> *mut StdbrMunicipio {
     core_mun::Municipio::from_ibge_code(code).map_or(ptr::null_mut(), |m| {
@@ -22,12 +21,14 @@ pub extern "C" fn stdbr_municipio_from_ibge_code(code: u32) -> *mut StdbrMunicip
     })
 }
 
-/// Get the capital of a given state.
-/// Caller frees with `stdbr_municipio_destroy`.
+/// Gets a capital, or `NULL` for an invalid state. Caller destroys it with `stdbr_municipio_destroy`.
 #[unsafe(no_mangle)]
-pub extern "C" fn stdbr_municipio_capital_of(state: StdbrState) -> *mut StdbrMunicipio {
+pub extern "C" fn stdbr_municipio_capital_of(state: u8) -> *mut StdbrMunicipio {
+    let Some(state) = StdbrState::core_from_raw(state) else {
+        return ptr::null_mut();
+    };
     Box::into_raw(Box::new(StdbrMunicipio(core_mun::Municipio::capital_of(
-        state.into_core(),
+        state,
     ))))
 }
 
@@ -39,7 +40,7 @@ pub unsafe extern "C" fn stdbr_municipio_destroy(m: *mut StdbrMunicipio) {
     }
 }
 
-/// Returns the IBGE code of a municipio.
+/// Returns the IBGE code, or the invalid code 0 when `m` is `NULL`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn stdbr_municipio_ibge_code(m: *const StdbrMunicipio) -> u32 {
     if m.is_null() {
@@ -57,16 +58,16 @@ pub unsafe extern "C" fn stdbr_municipio_name(m: *const StdbrMunicipio) -> *mut 
     to_c_string(unsafe { &*m }.0.name.into())
 }
 
-/// Returns the state of a municipio.
+/// Returns the state, or `STDBR_STATE_INVALID` when `m` is `NULL`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn stdbr_municipio_state(m: *const StdbrMunicipio) -> StdbrState {
     if m.is_null() {
-        return StdbrState::AC;
+        return StdbrState::Invalid;
     }
     StdbrState::from_core(unsafe { &*m }.0.state)
 }
 
-/// Returns whether a municipio is a state capital.
+/// Returns whether a municipio is a capital; returns `false` when `m` is `NULL`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn stdbr_municipio_is_capital(m: *const StdbrMunicipio) -> bool {
     if m.is_null() {
@@ -84,18 +85,17 @@ pub extern "C" fn stdbr_municipio_count() -> u32 {
 
 // --- List API ---
 
-/// Returns all municipalities in a given state as a list.
-/// Caller frees with `stdbr_municipio_list_destroy`.
+/// Returns a state list, or `NULL` for invalid state. Caller uses `stdbr_municipio_list_destroy`.
 #[unsafe(no_mangle)]
-pub extern "C" fn stdbr_municipio_by_state(state: StdbrState) -> *mut StdbrMunicipioList {
-    let items = core_mun::Municipio::by_state(state.into_core())
-        .iter()
-        .collect();
+pub extern "C" fn stdbr_municipio_by_state(state: u8) -> *mut StdbrMunicipioList {
+    let Some(state) = StdbrState::core_from_raw(state) else {
+        return ptr::null_mut();
+    };
+    let items = core_mun::Municipio::by_state(state).iter().collect();
     Box::into_raw(Box::new(StdbrMunicipioList { items }))
 }
 
-/// Searches municipalities by name (case-insensitive substring match).
-/// Caller frees with `stdbr_municipio_list_destroy`.
+/// Searches by name, or returns `NULL` for a null/invalid query. Caller destroys the list with `stdbr_municipio_list_destroy`.
 ///
 /// # Safety
 /// `query` must be a valid null-terminated UTF-8 string.
@@ -110,11 +110,11 @@ pub unsafe extern "C" fn stdbr_municipio_search_by_name(
     Box::into_raw(Box::new(StdbrMunicipioList { items }))
 }
 
-/// Returns the number of items in a municipio list.
+/// Returns the item count, or `UINT32_MAX` when `list` is `NULL`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn stdbr_municipio_list_count(list: *const StdbrMunicipioList) -> u32 {
     if list.is_null() {
-        return 0;
+        return u32::MAX;
     }
     #[allow(clippy::cast_possible_truncation)]
     {
@@ -122,9 +122,7 @@ pub unsafe extern "C" fn stdbr_municipio_list_count(list: *const StdbrMunicipioL
     }
 }
 
-/// Returns a municipio from the list at the given index.
-/// The returned pointer is valid as long as the list is alive. Do NOT free it.
-/// Returns `NULL` if out of bounds.
+/// Returns an independently owned municipio, or `NULL` for a null list/out-of-range index; destroy it with `stdbr_municipio_destroy`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn stdbr_municipio_list_get(
     list: *const StdbrMunicipioList,

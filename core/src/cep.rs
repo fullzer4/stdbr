@@ -7,7 +7,7 @@
 use alloc::string::String;
 use core::fmt;
 
-use crate::rand::{simple_seed, xorshift64};
+use crate::rand::{RandomSource, SeededRng, below_u32, simple_seed};
 use crate::uf::State;
 use crate::util::impl_document_traits;
 
@@ -38,48 +38,77 @@ impl PostalRegion {
     }
 }
 
-/// CEP range `(start, end)` inclusive for a given state.
-fn cep_range(state: State) -> (u32, u32) {
-    match state {
-        State::SP => (1_000_000, 19_999_999),
-        State::RJ => (20_000_000, 28_999_999),
-        State::ES => (29_000_000, 29_999_999),
-        State::MG => (30_000_000, 39_999_999),
-        State::BA => (40_000_000, 48_999_999),
-        State::SE => (49_000_000, 49_999_999),
-        State::PE => (50_000_000, 56_999_999),
-        State::AL => (57_000_000, 57_999_999),
-        State::PB => (58_000_000, 58_999_999),
-        State::RN => (59_000_000, 59_999_999),
-        State::CE => (60_000_000, 63_999_999),
-        State::PI => (64_000_000, 64_999_999),
-        State::MA => (65_000_000, 65_999_999),
-        State::PA => (66_000_000, 68_899_999),
-        State::AM => (69_000_000, 69_299_999),
-        State::AC => (69_900_000, 69_999_999),
-        State::AP => (68_900_000, 68_999_999),
-        State::RR => (69_300_000, 69_399_999),
-        State::DF => (70_000_000, 72_799_999),
-        State::GO => (72_800_000, 76_799_999),
-        State::TO => (77_000_000, 77_999_999),
-        State::MT => (78_000_000, 78_899_999),
-        State::MS => (79_000_000, 79_999_999),
-        State::RO => (76_800_000, 76_999_999),
-        State::PR => (80_000_000, 87_999_999),
-        State::SC => (88_000_000, 89_999_999),
-        State::RS => (90_000_000, 99_999_999),
+#[derive(Clone, Copy)]
+struct CepRange {
+    start: u32,
+    end: u32,
+}
+
+impl CepRange {
+    const fn new(start: u32, end: u32) -> Self {
+        Self { start, end }
     }
+
+    const fn len(self) -> u32 {
+        self.end - self.start + 1
+    }
+
+    const fn contains(self, value: u32) -> bool {
+        value >= self.start && value <= self.end
+    }
+}
+
+/// Official inclusive CEP segments for a state. Some UFs are interleaved and
+/// therefore cannot be represented by a single minimum/maximum pair.
+static CEP_RANGES: [&[CepRange]; 27] = [
+    &[CepRange::new(69_900_000, 69_999_999)], // AC
+    &[CepRange::new(57_000_000, 57_999_999)], // AL
+    &[
+        CepRange::new(69_000_000, 69_299_999),
+        CepRange::new(69_400_000, 69_899_999),
+    ], // AM
+    &[CepRange::new(68_900_000, 68_999_999)], // AP
+    &[CepRange::new(40_000_000, 48_999_999)], // BA
+    &[CepRange::new(60_000_000, 63_999_999)], // CE
+    &[
+        CepRange::new(70_000_000, 72_799_999),
+        CepRange::new(73_000_000, 73_699_999),
+    ], // DF
+    &[CepRange::new(29_000_000, 29_999_999)], // ES
+    &[
+        CepRange::new(72_800_000, 72_999_999),
+        CepRange::new(73_700_000, 76_799_999),
+    ], // GO
+    &[CepRange::new(65_000_000, 65_999_999)], // MA
+    &[CepRange::new(30_000_000, 39_999_999)], // MG
+    &[CepRange::new(79_000_000, 79_999_999)], // MS
+    &[CepRange::new(78_000_000, 78_899_999)], // MT
+    &[CepRange::new(66_000_000, 68_899_999)], // PA
+    &[CepRange::new(58_000_000, 58_999_999)], // PB
+    &[CepRange::new(50_000_000, 56_999_999)], // PE
+    &[CepRange::new(64_000_000, 64_999_999)], // PI
+    &[CepRange::new(80_000_000, 87_999_999)], // PR
+    &[CepRange::new(20_000_000, 28_999_999)], // RJ
+    &[CepRange::new(59_000_000, 59_999_999)], // RN
+    &[CepRange::new(76_800_000, 76_999_999)], // RO
+    &[CepRange::new(69_300_000, 69_399_999)], // RR
+    &[CepRange::new(90_000_000, 99_999_999)], // RS
+    &[CepRange::new(88_000_000, 89_999_999)], // SC
+    &[CepRange::new(49_000_000, 49_999_999)], // SE
+    &[CepRange::new(1_000_000, 19_999_999)],  // SP
+    &[CepRange::new(77_000_000, 77_999_999)], // TO
+];
+
+fn cep_ranges(state: State) -> &'static [CepRange] {
+    CEP_RANGES[state as usize]
 }
 
 /// Determines the state from a CEP numeric value by range lookup.
 fn state_from_cep_value(value: u32) -> Option<State> {
-    for &state in &crate::uf::ALL {
-        let (start, end) = cep_range(state);
-        if value >= start && value <= end {
-            return Some(state);
-        }
-    }
-    None
+    crate::uf::ALL
+        .iter()
+        .find(|&&state| cep_ranges(state).iter().any(|range| range.contains(value)))
+        .copied()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -98,6 +127,8 @@ impl fmt::Display for CepError {
         })
     }
 }
+
+impl core::error::Error for CepError {}
 
 /// A validated CEP stored as 8 ASCII bytes.
 ///
@@ -179,13 +210,26 @@ impl fmt::Display for Cep {
 
 impl_document_traits!(Cep, CepError);
 
-pub fn remove_symbols(cep: &str) -> String {
+/// Normalizes a permissive CEP input by retaining only ASCII digits.
+pub fn normalize(cep: &str) -> String {
     cep.chars().filter(char::is_ascii_digit).collect()
 }
 
+/// Compatibility alias for [`normalize`].
+pub fn remove_symbols(cep: &str) -> String {
+    normalize(cep)
+}
+
+/// Lenient validation that ignores every non-ASCII-digit character.
+pub fn is_valid_lenient(cep: &str) -> bool {
+    normalize(cep).len() == CEP_LEN
+}
+
+/// Compatibility alias for [`is_valid_lenient`].
+///
+/// Use [`is_valid_strict`] when punctuation and whitespace must be rejected.
 pub fn is_valid(cep: &str) -> bool {
-    let raw = remove_symbols(cep);
-    raw.len() == CEP_LEN
+    is_valid_lenient(cep)
 }
 
 /// Strict validation - accepts `#####-###` or `########` only.
@@ -200,47 +244,106 @@ pub fn format_cep(cep: &str) -> Option<String> {
 }
 
 /// Generates a random valid CEP as an 8-digit string.
+///
+/// This generation is not cryptographically secure.
 pub fn generate() -> String {
     generate_cep().as_str().into()
 }
 
 /// Generates a random valid [`Cep`].
+///
+/// This generation is not cryptographically secure.
 pub fn generate_cep() -> Cep {
-    let mut seed = simple_seed();
-    let mut digits = [0u8; CEP_LEN];
-    for d in &mut digits {
-        seed = xorshift64(seed);
-        *d = (seed % 10) as u8;
-    }
-    Cep::from_numeric(digits)
+    let mut rng = SeededRng::new(simple_seed());
+    generate_cep_with_rng(&mut rng)
+}
+
+/// Generates a deterministic [`Cep`] from a seed.
+///
+/// This generation is not cryptographically secure. Seed zero is accepted.
+pub fn generate_cep_with_seed(seed: u64) -> Cep {
+    let mut rng = SeededRng::new(seed);
+    generate_cep_with_rng(&mut rng)
+}
+
+/// Generates a [`Cep`] using an injected random source.
+///
+/// This generation is not cryptographically secure.
+pub fn generate_cep_with_rng<R: RandomSource + ?Sized>(rng: &mut R) -> Cep {
+    cep_from_value(below_u32(rng, 100_000_000))
 }
 
 /// Generates a random [`Cep`] for a given postal region (1st digit fixed).
+///
+/// This generation is not cryptographically secure.
 pub fn generate_for_region(region: PostalRegion) -> Cep {
-    let mut seed = simple_seed();
-    let mut digits = [0u8; CEP_LEN];
-    digits[0] = region as u8;
-    for d in &mut digits[1..] {
-        seed = xorshift64(seed);
-        *d = (seed % 10) as u8;
-    }
-    Cep::from_numeric(digits)
+    let mut rng = SeededRng::new(simple_seed());
+    generate_for_region_with_rng(&mut rng, region)
+}
+
+/// Generates a deterministic [`Cep`] for a postal region from a seed.
+///
+/// This generation is not cryptographically secure. Seed zero is accepted.
+pub fn generate_for_region_with_seed(seed: u64, region: PostalRegion) -> Cep {
+    let mut rng = SeededRng::new(seed);
+    generate_for_region_with_rng(&mut rng, region)
+}
+
+/// Generates a [`Cep`] for a postal region using an injected random source.
+///
+/// This generation is not cryptographically secure.
+pub fn generate_for_region_with_rng<R: RandomSource + ?Sized>(
+    rng: &mut R,
+    region: PostalRegion,
+) -> Cep {
+    let value = u32::from(region as u8) * 10_000_000 + below_u32(rng, 10_000_000);
+    cep_from_value(value)
 }
 
 /// Generates a random [`Cep`] within the range of a given state.
+///
+/// Each official segment is selected proportionally to its number of CEPs.
+/// This generation is not cryptographically secure.
 pub fn generate_for_state(state: State) -> Cep {
-    let (start, end) = cep_range(state);
-    let mut seed = simple_seed();
-    seed = xorshift64(seed);
-    let range = end - start + 1;
-    #[allow(clippy::cast_possible_truncation)]
-    let value = start + (seed as u32 % range);
+    let mut rng = SeededRng::new(simple_seed());
+    generate_for_state_with_rng(&mut rng, state)
+}
 
+/// Generates a deterministic [`Cep`] within a state's official segments.
+///
+/// Each segment is weighted by its inclusive size. This generation is not
+/// cryptographically secure. Seed zero is accepted.
+pub fn generate_for_state_with_seed(seed: u64, state: State) -> Cep {
+    let mut rng = SeededRng::new(seed);
+    generate_for_state_with_rng(&mut rng, state)
+}
+
+/// Generates a [`Cep`] within a state's official segments using an injected
+/// random source.
+///
+/// Each segment is weighted by its inclusive size. This generation is not
+/// cryptographically secure.
+pub fn generate_for_state_with_rng<R: RandomSource + ?Sized>(rng: &mut R, state: State) -> Cep {
+    let ranges = cep_ranges(state);
+    let total: u32 = ranges.iter().map(|range| range.len()).sum();
+    let mut offset = below_u32(rng, total);
+
+    for range in ranges {
+        let len = range.len();
+        if offset < len {
+            return cep_from_value(range.start + offset);
+        }
+        offset -= len;
+    }
+
+    unreachable!("CEP range offset must select a segment")
+}
+
+fn cep_from_value(mut value: u32) -> Cep {
     let mut digits = [0u8; CEP_LEN];
-    let mut v = value;
     for i in (0..CEP_LEN).rev() {
-        digits[i] = (v % 10) as u8;
-        v /= 10;
+        digits[i] = (value % 10) as u8;
+        value /= 10;
     }
     Cep::from_numeric(digits)
 }

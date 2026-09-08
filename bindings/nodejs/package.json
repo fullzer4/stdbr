@@ -1,9 +1,23 @@
 {
   "name": "@stdbr/stdbr",
   "version": "0.3.1",
-  "type": "module",
+  "description": "Standard library for Brazil",
+  "type": "commonjs",
   "main": "index.js",
   "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "require": "./index.js",
+      "default": "./index.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "LICENSE"
+  ],
   "napi": {
     "name": "stdbr",
     "triples": {
@@ -15,24 +29,44 @@
       ]
     }
   },
-  "license": "MIT OR Apache-2.0",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fullzer4/stdbr.git",
+    "directory": "bindings/nodejs"
+  },
+  "homepage": "https://github.com/fullzer4/stdbr",
+  "bugs": {
+    "url": "https://github.com/fullzer4/stdbr/issues"
+  },
+  "keywords": [
+    "brazil",
+    "cpf",
+    "cnpj",
+    "cep",
+    "validation"
+  ],
+  "engines": {
+    "node": ">=18.17.0"
+  },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "build": "napi build --platform --release",
     "artifacts": "napi artifacts",
-    "prepublishOnly": "napi prepublish --tagstyle npm --skip-gh-release"
+    "prepublishOnly": "napi prepublish --tagstyle npm --skip-gh-release",
+    "test:pack": "node smoke_test.js"
   },
   "optionalDependencies": {
-    "@stdbr/stdbr-linux-x64-gnu": "0.0.2",
-    "@stdbr/stdbr-linux-x64-musl": "0.0.2",
-    "@stdbr/stdbr-linux-arm64-gnu": "0.0.2",
-    "@stdbr/stdbr-darwin-x64": "0.0.2",
-    "@stdbr/stdbr-darwin-arm64": "0.0.2",
-    "@stdbr/stdbr-win32-x64-msvc": "0.0.2"
+    "@stdbr/stdbr-linux-x64-gnu": "0.3.1",
+    "@stdbr/stdbr-linux-x64-musl": "0.3.1",
+    "@stdbr/stdbr-linux-arm64-gnu": "0.3.1",
+    "@stdbr/stdbr-darwin-x64": "0.3.1",
+    "@stdbr/stdbr-darwin-arm64": "0.3.1",
+    "@stdbr/stdbr-win32-x64-msvc": "0.3.1"
   },
   "devDependencies": {
-    "@napi-rs/cli": "^2"
+    "@napi-rs/cli": "2.18.4"
   }
 }

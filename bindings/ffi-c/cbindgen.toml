@@ -15,6 +15,9 @@ header = """
  *
  * All strings returned by stdbr functions are heap-allocated
  * and must be freed with stdbr_free().
+ * Enum-like input parameters use uint8_t so invalid values can be rejected
+ * safely. Pass the corresponding STDBR_* constants; outputs use explicit
+ * *_INVALID sentinels where NULL would otherwise be ambiguous.
  */"""
 
 [enum]

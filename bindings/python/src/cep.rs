@@ -7,7 +7,7 @@ fn cep_err(e: &core_cep::CepError) -> PyErr {
     pyo3::exceptions::PyValueError::new_err(e.to_string())
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum PostalRegion {
     GranSaoPaulo = 0,

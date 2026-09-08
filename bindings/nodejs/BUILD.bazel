@@ -1,7 +1,10 @@
-load("@rules_rust//rust:defs.bzl", "rust_shared_library")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
+load("@rules_rust//rust:defs.bzl", "rust_shared_library")
 
-exports_files(["Cargo.toml", "test_parity.js"] + glob(["src/**/*.rs"]))
+exports_files([
+    "Cargo.toml",
+    "test_parity.mjs",
+] + glob(["src/**/*.rs"]))
 
 cargo_build_script(
     name = "napi_build_script",
@@ -13,13 +16,13 @@ rust_shared_library(
     name = "stdbr-napi",
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/lib.rs",
-    deps = [
-        "//core:stdbr-core",
-        "@crates//:napi",
-        ":napi_build_script",
-    ],
     proc_macro_deps = ["@crates//:napi-derive"],
     visibility = ["//visibility:public"],
+    deps = [
+        ":napi_build_script",
+        "//core:stdbr-core",
+        "@crates//:napi",
+    ],
 )
 
 genrule(

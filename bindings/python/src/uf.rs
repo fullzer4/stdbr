@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 use stdbr_core::uf as core_uf;
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Region {
     Norte = 0,
@@ -25,7 +25,7 @@ impl From<core_uf::Region> for Region {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum State {
     AC = 0,

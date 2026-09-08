@@ -1,0 +1,192 @@
+use serde_json::{Map, Value};
+use std::collections::HashSet;
+use std::fmt::Write as _;
+use std::fs;
+use std::path::Path;
+
+pub const BEGIN_MARKER: &str =
+    "// BEGIN GENERATED MUNICIPIO DATA - run: bazel run //tools/municipio_gen -- generate";
+pub const END_MARKER: &str = "// END GENERATED MUNICIPIO DATA";
+
+const STATES: [&str; 27] = [
+    "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE",
+    "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO",
+];
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Municipio {
+    pub id: u32,
+    pub nome: String,
+    pub uf: String,
+}
+
+pub fn parse_and_normalize(input: &str) -> Result<Vec<Municipio>, String> {
+    let value: Value =
+        serde_json::from_str(input).map_err(|error| format!("invalid JSON: {error}"))?;
+    let entries = value
+        .as_array()
+        .ok_or_else(|| "IBGE JSON root must be an array".to_owned())?;
+    if entries.is_empty() {
+        return Err("IBGE JSON must contain at least one municipality".to_owned());
+    }
+
+    let mut seen = HashSet::with_capacity(entries.len());
+    let mut municipalities = Vec::with_capacity(entries.len());
+    for entry in entries {
+        let id_u64 = entry
+            .get("id")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| "municipality id must be an unsigned integer".to_owned())?;
+        let id =
+            u32::try_from(id_u64).map_err(|_| format!("municipality id {id_u64} exceeds u32"))?;
+        if !(1_000_000..=9_999_999).contains(&id) {
+            return Err(format!("municipality id {id} must have seven digits"));
+        }
+        if !seen.insert(id) {
+            return Err(format!("duplicate municipality id {id}"));
+        }
+
+        let nome = entry
+            .get("nome")
+            .and_then(Value::as_str)
+            .filter(|name| !name.is_empty())
+            .ok_or_else(|| format!("municipality {id} has no name"))?;
+        let uf =
+            extract_uf(entry).ok_or_else(|| format!("cannot determine UF for {nome} ({id})"))?;
+        if !STATES.contains(&uf) {
+            return Err(format!("municipality {nome} ({id}) has invalid UF {uf}"));
+        }
+
+        municipalities.push(Municipio {
+            id,
+            nome: nome.to_owned(),
+            uf: uf.to_owned(),
+        });
+    }
+
+    municipalities.sort_by(|a, b| {
+        state_index(&a.uf)
+            .cmp(&state_index(&b.uf))
+            .then_with(|| a.nome.cmp(&b.nome))
+            .then_with(|| a.id.cmp(&b.id))
+    });
+    Ok(municipalities)
+}
+
+fn extract_uf(entry: &Value) -> Option<&str> {
+    entry
+        .get("uf")
+        .or_else(|| entry.get("uf_sigla"))
+        .and_then(Value::as_str)
+        .or_else(|| {
+            entry
+                .pointer("/microrregiao/mesorregiao/UF/sigla")?
+                .as_str()
+        })
+        .or_else(|| {
+            entry
+                .pointer("/regiao-imediata/regiao-intermediaria/UF/sigla")?
+                .as_str()
+        })
+}
+
+fn state_index(uf: &str) -> usize {
+    STATES.iter().position(|state| *state == uf).unwrap()
+}
+
+pub fn render_source(municipalities: &[Municipio]) -> Result<String, String> {
+    let values = municipalities
+        .iter()
+        .map(|municipio| {
+            let mut value = Map::new();
+            value.insert("id".to_owned(), Value::from(municipio.id));
+            value.insert("nome".to_owned(), Value::from(municipio.nome.clone()));
+            value.insert("uf".to_owned(), Value::from(municipio.uf.clone()));
+            Value::Object(value)
+        })
+        .collect::<Vec<_>>();
+    let mut output = serde_json::to_string_pretty(&values)
+        .map_err(|error| format!("failed to serialize normalized JSON: {error}"))?;
+    output.push('\n');
+    Ok(output)
+}
+
+pub fn render_region(municipalities: &[Municipio]) -> String {
+    let mut output = String::new();
+    writeln!(output, "{BEGIN_MARKER}").unwrap();
+    writeln!(output, "#[allow(clippy::unreadable_literal)]").unwrap();
+    writeln!(output, "pub const ALL: &[Municipio] = &[").unwrap();
+    for municipio in municipalities {
+        writeln!(output, "    Municipio {{").unwrap();
+        writeln!(output, "        ibge_code: {},", municipio.id).unwrap();
+        writeln!(output, "        name: {:?},", municipio.nome).unwrap();
+        writeln!(output, "        state: State::{},", municipio.uf).unwrap();
+        writeln!(output, "    }},").unwrap();
+    }
+    writeln!(output, "];").unwrap();
+    writeln!(output, "{END_MARKER}").unwrap();
+    output
+}
+
+fn validate_complete(municipalities: &[Municipio]) -> Result<(), String> {
+    if municipalities.len() < 5_500 {
+        return Err(format!(
+            "IBGE response is incomplete: expected at least 5500 municipalities, got {}",
+            municipalities.len()
+        ));
+    }
+    for state in STATES {
+        if !municipalities.iter().any(|municipio| municipio.uf == state) {
+            return Err(format!("IBGE response has no municipalities for {state}"));
+        }
+    }
+    Ok(())
+}
+
+pub fn replace_region(file: &str, generated_region: &str) -> Result<String, String> {
+    let begin = file
+        .find(BEGIN_MARKER)
+        .ok_or_else(|| format!("missing marker: {BEGIN_MARKER}"))?;
+    let end_start = file[begin..]
+        .find(END_MARKER)
+        .map(|offset| begin + offset)
+        .ok_or_else(|| format!("missing marker: {END_MARKER}"))?;
+    let end = end_start + END_MARKER.len();
+
+    let mut output = String::with_capacity(file.len() + generated_region.len());
+    output.push_str(&file[..begin]);
+    output.push_str(generated_region.trim_end());
+    output.push_str(&file[end..]);
+    Ok(output)
+}
+
+pub fn generate(
+    input: &Path,
+    target: &Path,
+    source: &Path,
+    update_source: bool,
+) -> Result<bool, String> {
+    let input_text = fs::read_to_string(input)
+        .map_err(|error| format!("failed to read {}: {error}", input.display()))?;
+    let municipalities = parse_and_normalize(&input_text)?;
+    validate_complete(&municipalities)?;
+    let target_text = fs::read_to_string(target)
+        .map_err(|error| format!("failed to read {}: {error}", target.display()))?;
+    let generated = replace_region(&target_text, &render_region(&municipalities))?;
+    let changed = generated != target_text;
+
+    if update_source {
+        fs::write(source, render_source(&municipalities)?)
+            .map_err(|error| format!("failed to write {}: {error}", source.display()))?;
+    }
+    fs::write(target, generated)
+        .map_err(|error| format!("failed to write {}: {error}", target.display()))?;
+    Ok(changed)
+}
+
+pub fn has_drift(input: &str, target: &str) -> Result<bool, String> {
+    let municipalities = parse_and_normalize(input)?;
+    validate_complete(&municipalities)?;
+    let expected = replace_region(target, &render_region(&municipalities))?;
+    Ok(expected != target)
+}

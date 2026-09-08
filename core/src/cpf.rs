@@ -6,7 +6,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use core::fmt;
 
-use crate::rand::{simple_seed, xorshift64};
+use crate::rand::{RandomSource, SeededRng, below_u8, simple_seed};
 use crate::util::{self, impl_document_traits};
 
 const CPF_LEN: usize = 11;
@@ -58,6 +58,8 @@ impl fmt::Display for CpfError {
         })
     }
 }
+
+impl core::error::Error for CpfError {}
 
 /// A validated CPF stored as 11 ASCII bytes.
 ///
@@ -120,17 +122,31 @@ impl fmt::Display for Cpf {
 
 impl_document_traits!(Cpf, CpfError);
 
-pub fn remove_symbols(cpf: &str) -> String {
+/// Normalizes a permissive CPF input by retaining only ASCII digits.
+pub fn normalize(cpf: &str) -> String {
     cpf.chars().filter(char::is_ascii_digit).collect()
 }
 
-pub fn is_valid(cpf: &str) -> bool {
-    let raw = remove_symbols(cpf);
+/// Compatibility alias for [`normalize`].
+pub fn remove_symbols(cpf: &str) -> String {
+    normalize(cpf)
+}
+
+/// Lenient validation that ignores every non-ASCII-digit character.
+pub fn is_valid_lenient(cpf: &str) -> bool {
+    let raw = normalize(cpf);
     if raw.len() != CPF_LEN {
         return false;
     }
     let d: Vec<u8> = raw.bytes().map(|b| b - b'0').collect();
     validate_digits(&d)
+}
+
+/// Compatibility alias for [`is_valid_lenient`].
+///
+/// Use [`is_valid_strict`] when punctuation and whitespace must be rejected.
+pub fn is_valid(cpf: &str) -> bool {
+    is_valid_lenient(cpf)
 }
 
 /// Strict validation - accepts `###.###.###-##` or `###########` only.
@@ -146,24 +162,55 @@ pub fn format_cpf(cpf: &str) -> Option<String> {
 }
 
 /// Generates a random valid CPF as an 11-digit string.
+///
+/// This generation is not cryptographically secure.
 pub fn generate() -> String {
     generate_cpf().as_str().into()
 }
 
 /// Generates a random valid [`Cpf`].
+///
+/// This generation is not cryptographically secure.
 pub fn generate_cpf() -> Cpf {
-    generate_with_seed(simple_seed())
+    let mut rng = SeededRng::new(simple_seed());
+    generate_cpf_with_rng(&mut rng)
+}
+
+/// Generates a valid [`Cpf`] using an injected random source.
+///
+/// This generation is not cryptographically secure.
+pub fn generate_cpf_with_rng<R: RandomSource + ?Sized>(rng: &mut R) -> Cpf {
+    generate_with_rng(rng)
 }
 
 /// Generates a random valid [`Cpf`] for a given fiscal region.
+///
+/// This generation is not cryptographically secure.
 pub fn generate_for_region(region: FiscalRegion) -> Cpf {
-    let mut seed = simple_seed();
+    let mut rng = SeededRng::new(simple_seed());
+    generate_for_region_with_rng(&mut rng, region)
+}
+
+/// Generates a deterministic [`Cpf`] for a fiscal region from a seed.
+///
+/// This generation is not cryptographically secure. Seed zero is accepted.
+pub fn generate_for_region_with_seed(seed: u64, region: FiscalRegion) -> Cpf {
+    let mut rng = SeededRng::new(seed);
+    generate_for_region_with_rng(&mut rng, region)
+}
+
+/// Generates a valid [`Cpf`] for a fiscal region using an injected source.
+///
+/// This generation is not cryptographically secure.
+pub fn generate_for_region_with_rng<R: RandomSource + ?Sized>(
+    rng: &mut R,
+    region: FiscalRegion,
+) -> Cpf {
     let mut digits = [0u8; CPF_LEN];
 
     loop {
         for d in &mut digits[..8] {
-            seed = xorshift64(seed);
-            *d = (seed % 10) as u8;
+            *d = below_u8(rng, 10);
         }
         digits[8] = region as u8;
         if !all_equal(&digits[..9]) {
@@ -259,13 +306,23 @@ fn parse_strict(s: &str) -> Result<Cpf, CpfError> {
     Ok(Cpf::from_numeric(digits))
 }
 
-fn generate_with_seed(mut seed: u64) -> Cpf {
+/// Generates a deterministic valid [`Cpf`] from a seed.
+///
+/// This generation is not cryptographically secure. Seed zero is accepted.
+pub fn generate_with_seed(seed: u64) -> Cpf {
+    let mut rng = SeededRng::new(seed);
+    generate_with_rng(&mut rng)
+}
+
+/// Generates a valid [`Cpf`] using an injected random source.
+///
+/// This generation is not cryptographically secure.
+pub fn generate_with_rng<R: RandomSource + ?Sized>(rng: &mut R) -> Cpf {
     let mut digits = [0u8; CPF_LEN];
 
     loop {
         for d in &mut digits[..9] {
-            seed = xorshift64(seed);
-            *d = (seed % 10) as u8;
+            *d = below_u8(rng, 10);
         }
         if !all_equal(&digits[..9]) {
             break;
@@ -582,6 +639,12 @@ mod tests {
             let parsed: Cpf = cpf.as_str().parse().unwrap();
             assert_eq!(cpf, parsed);
         }
+    }
+
+    #[test]
+    fn seeded_generation_accepts_zero_and_is_deterministic() {
+        assert_eq!(generate_with_seed(0), generate_with_seed(0));
+        assert!(is_valid(generate_with_seed(0).as_str()));
     }
 
     #[test]

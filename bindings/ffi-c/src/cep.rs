@@ -20,17 +20,40 @@ pub enum StdbrPostalRegion {
     DfGoToMtMsRo = 7,
     PrSc = 8,
     Rs = 9,
+    /// Sentinel returned when a postal region cannot be read.
+    Invalid = 255,
 }
 
 impl StdbrPostalRegion {
     fn from_core(r: cep::PostalRegion) -> Self {
-        // SAFETY: both enums are repr(u8) 0..=9 with same variant order.
-        unsafe { core::mem::transmute(r as u8) }
+        match r {
+            cep::PostalRegion::GranSaoPaulo => Self::GranSaoPaulo,
+            cep::PostalRegion::InteriorSaoPaulo => Self::InteriorSaoPaulo,
+            cep::PostalRegion::RjEs => Self::RjEs,
+            cep::PostalRegion::Mg => Self::Mg,
+            cep::PostalRegion::BaSe => Self::BaSe,
+            cep::PostalRegion::PeAlPbRn => Self::PeAlPbRn,
+            cep::PostalRegion::CePiMaPaAmAcApRr => Self::CePiMaPaAmAcApRr,
+            cep::PostalRegion::DfGoToMtMsRo => Self::DfGoToMtMsRo,
+            cep::PostalRegion::PrSc => Self::PrSc,
+            cep::PostalRegion::Rs => Self::Rs,
+        }
     }
 
-    fn into_core(self) -> cep::PostalRegion {
-        // SAFETY: both enums are repr(u8) 0..=9 with same variant order.
-        unsafe { core::mem::transmute(self as u8) }
+    fn core_from_raw(value: u8) -> Option<cep::PostalRegion> {
+        match value {
+            0 => Some(cep::PostalRegion::GranSaoPaulo),
+            1 => Some(cep::PostalRegion::InteriorSaoPaulo),
+            2 => Some(cep::PostalRegion::RjEs),
+            3 => Some(cep::PostalRegion::Mg),
+            4 => Some(cep::PostalRegion::BaSe),
+            5 => Some(cep::PostalRegion::PeAlPbRn),
+            6 => Some(cep::PostalRegion::CePiMaPaAmAcApRr),
+            7 => Some(cep::PostalRegion::DfGoToMtMsRo),
+            8 => Some(cep::PostalRegion::PrSc),
+            9 => Some(cep::PostalRegion::Rs),
+            _ => None,
+        }
     }
 }
 
@@ -94,20 +117,22 @@ pub extern "C" fn stdbr_cep_create() -> *mut StdbrCep {
     Box::into_raw(Box::new(StdbrCep(cep::generate_cep())))
 }
 
-/// Generates a random CEP for a postal region.
+/// Generates a random CEP for a postal region, or `NULL` if `region` is invalid.
 #[unsafe(no_mangle)]
-pub extern "C" fn stdbr_cep_create_for_region(region: StdbrPostalRegion) -> *mut StdbrCep {
-    Box::into_raw(Box::new(StdbrCep(cep::generate_for_region(
-        region.into_core(),
-    ))))
+pub extern "C" fn stdbr_cep_create_for_region(region: u8) -> *mut StdbrCep {
+    let Some(region) = StdbrPostalRegion::core_from_raw(region) else {
+        return ptr::null_mut();
+    };
+    Box::into_raw(Box::new(StdbrCep(cep::generate_for_region(region))))
 }
 
-/// Generates a random CEP within the range of a given state.
+/// Generates a CEP for a state, or `NULL` if `state` is invalid.
 #[unsafe(no_mangle)]
-pub extern "C" fn stdbr_cep_create_for_state(state: StdbrState) -> *mut StdbrCep {
-    Box::into_raw(Box::new(StdbrCep(cep::generate_for_state(
-        state.into_core(),
-    ))))
+pub extern "C" fn stdbr_cep_create_for_state(state: u8) -> *mut StdbrCep {
+    let Some(state) = StdbrState::core_from_raw(state) else {
+        return ptr::null_mut();
+    };
+    Box::into_raw(Box::new(StdbrCep(cep::generate_for_state(state))))
 }
 
 /// Destroys a CEP handle. `NULL`-safe.
@@ -145,11 +170,11 @@ pub unsafe extern "C" fn stdbr_cep_masked(cep: *const StdbrCep) -> *mut c_char {
     to_c_string(unsafe { &*cep }.0.masked())
 }
 
-/// Returns the postal region.
+/// Returns the postal region, or `STDBR_POSTAL_REGION_INVALID` when `cep` is `NULL`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn stdbr_cep_postal_region(cep: *const StdbrCep) -> StdbrPostalRegion {
     if cep.is_null() {
-        return StdbrPostalRegion::GranSaoPaulo;
+        return StdbrPostalRegion::Invalid;
     }
     StdbrPostalRegion::from_core(unsafe { &*cep }.0.postal_region())
 }

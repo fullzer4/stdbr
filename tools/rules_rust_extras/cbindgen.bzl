@@ -1,30 +1,19 @@
 def _cbindgen_impl(ctx):
     output = ctx.actions.declare_file(ctx.attr.header_name)
 
-    cmd = " ".join([
-        "cbindgen",
-        "--config",
-        ctx.file.config.path,
-        "--lockfile",
-        ctx.file.lockfile.path,
-        "--crate",
-        ctx.attr.crate_name,
-        "--output",
-        output.path,
-        ctx.file.manifest.dirname,
-    ])
+    args = ctx.actions.args()
+    args.add("--config")
+    args.add(ctx.file.config)
+    args.add("--output")
+    args.add(output)
+    args.add(ctx.file.crate_root)
 
-    all_inputs = (
-        ctx.files.srcs +
-        ctx.files.workspace_srcs +
-        [ctx.file.config, ctx.file.lockfile, ctx.file.manifest]
-    )
-
-    ctx.actions.run_shell(
-        inputs = all_inputs,
+    ctx.actions.run(
+        executable = ctx.executable._cbindgen,
+        arguments = [args],
+        inputs = depset(ctx.files.srcs + [ctx.file.config, ctx.file.crate_root]),
         outputs = [output],
-        command = cmd,
-        use_default_shell_env = True,
+        tools = [ctx.attr._cbindgen[DefaultInfo].files_to_run],
         mnemonic = "Cbindgen",
         progress_message = "Generating C header %{output}",
     )
@@ -44,31 +33,29 @@ cbindgen = rule(
     attrs = {
         "srcs": attr.label_list(
             allow_files = [".rs"],
-            doc = "Rust source files of the FFI crate.",
+            mandatory = True,
+            doc = "All local Rust source files parsed by cbindgen.",
+        ),
+        "crate_root": attr.label(
+            allow_single_file = [".rs"],
+            mandatory = True,
+            doc = "Root Rust source file, normally src/lib.rs.",
         ),
         "config": attr.label(
             allow_single_file = [".toml"],
+            mandatory = True,
             doc = "cbindgen.toml configuration file.",
-        ),
-        "manifest": attr.label(
-            allow_single_file = ["Cargo.toml"],
-            doc = "Cargo.toml of the workspace root.",
-        ),
-        "lockfile": attr.label(
-            allow_single_file = ["Cargo.lock"],
-            doc = "Cargo.lock of the workspace.",
-        ),
-        "workspace_srcs": attr.label_list(
-            allow_files = True,
-            doc = "All workspace Cargo.toml + source files needed by cargo metadata.",
-        ),
-        "crate_name": attr.string(
-            doc = "Name of the crate to generate bindings for.",
         ),
         "header_name": attr.string(
             default = "stdbr.h",
             doc = "Name of the output header file.",
         ),
+        "_cbindgen": attr.label(
+            default = Label("@nix_cbindgen//:cbindgen"),
+            allow_files = True,
+            executable = True,
+            cfg = "exec",
+        ),
     },
-    doc = "Generates a C header file from Rust sources using cbindgen.",
+    doc = "Generates a C header from local Rust source files.",
 )

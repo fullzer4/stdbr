@@ -1,0 +1,31 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "municipio_gen_lib",
+    srcs = ["src/lib.rs"],
+    deps = ["@crates//:serde_json"],
+)
+
+rust_binary(
+    name = "municipio_gen",
+    srcs = ["src/main.rs"],
+    deps = [":municipio_gen_lib"],
+)
+
+alias(
+    name = "generate",
+    actual = ":municipio_gen",
+)
+
+rust_test(
+    name = "drift_test",
+    srcs = ["tests/drift.rs"],
+    compile_data = [
+        "ibge_municipios.json",
+        "tests/ibge_api_fixture.json",
+        "//core:src/municipio.rs",
+    ],
+    deps = [":municipio_gen_lib"],
+)

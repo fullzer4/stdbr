@@ -5,7 +5,7 @@ fn cpf_err(e: &core_cpf::CpfError) -> PyErr {
     pyo3::exceptions::PyValueError::new_err(e.to_string())
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FiscalRegion {
     Rs = 0,

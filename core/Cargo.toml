@@ -4,6 +4,7 @@ version = "0.3.1"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+license-file = "../LICENSE"
 description.workspace = true
 repository.workspace = true
 homepage.workspace = true
@@ -12,7 +13,8 @@ keywords.workspace = true
 categories.workspace = true
 
 [features]
-default = ["std"]
+default = ["std", "municipio"]
+municipio = []
 std = []
 
 [dev-dependencies]

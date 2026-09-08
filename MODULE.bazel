@@ -1,4 +1,7 @@
-module(name = "stdbr", version = "0.0.1")
+module(
+    name = "stdbr",
+    version = "0.3.1",
+)
 
 bazel_dep(name = "rules_rust", version = "0.70.0")
 bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.70.0")
@@ -7,8 +10,12 @@ bazel_dep(name = "bazel_skylib", version = "1.8.2")
 bazel_dep(name = "platforms", version = "1.0.0")
 
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
-rust.toolchain(edition = "2024", versions = ["1.87.0"])
+rust.toolchain(
+    edition = "2024",
+    versions = ["1.87.0"],
+)
 use_repo(rust, "rust_toolchains")
+
 register_toolchains("@rust_toolchains//:all")
 
 crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
@@ -26,6 +33,10 @@ crate.from_cargo(
     ],
 )
 use_repo(crate, "crates")
+
+cbindgen_repository = use_repo_rule("//tools:nix_tools.bzl", "cbindgen_repository")
+
+cbindgen_repository(name = "nix_cbindgen")
 
 cjson = use_extension("//tools:cjson_ext.bzl", "cjson")
 use_repo(cjson, "cjson")

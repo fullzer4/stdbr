@@ -1,0 +1,25 @@
+[
+  {
+    "id": 3550308,
+    "nome": "São Paulo",
+    "microrregiao": null,
+    "regiao-imediata": {
+      "regiao-intermediaria": {
+        "UF": {
+          "sigla": "SP"
+        }
+      }
+    }
+  },
+  {
+    "id": 1200013,
+    "nome": "Acrelândia",
+    "microrregiao": {
+      "mesorregiao": {
+        "UF": {
+          "sigla": "AC"
+        }
+      }
+    }
+  }
+]

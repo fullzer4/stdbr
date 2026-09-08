@@ -1,0 +1,4 @@
+exports_files(
+    ["cep_ranges.csv"],
+    visibility = ["//visibility:public"],
+)
