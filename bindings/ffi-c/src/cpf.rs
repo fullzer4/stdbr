@@ -19,6 +19,8 @@ pub enum StdbrFiscalRegion {
     EsRj = 7,
     Sp = 8,
     PrSc = 9,
+    /// Sentinel returned when a fiscal region cannot be read.
+    Invalid = 255,
 }
 
 impl StdbrFiscalRegion {
@@ -27,8 +29,13 @@ impl StdbrFiscalRegion {
         unsafe { core::mem::transmute::<u8, Self>(r as u8) }
     }
 
-    fn into_core(self) -> FiscalRegion {
-        unsafe { core::mem::transmute::<u8, FiscalRegion>(self as u8) }
+    fn core_from_raw(value: u8) -> Option<FiscalRegion> {
+        if value <= 9 {
+            // SAFETY: FiscalRegion has exactly the discriminants 0..=9.
+            Some(unsafe { core::mem::transmute::<u8, FiscalRegion>(value) })
+        } else {
+            None
+        }
     }
 }
 
@@ -96,12 +103,13 @@ pub extern "C" fn stdbr_cpf_create() -> *mut StdbrCpf {
     Box::into_raw(Box::new(StdbrCpf(cpf::generate_cpf())))
 }
 
-/// Generates a random valid CPF for a fiscal region.
+/// Generates a random valid CPF for a fiscal region, or `NULL` if `region` is invalid.
 #[unsafe(no_mangle)]
-pub extern "C" fn stdbr_cpf_create_for_region(region: StdbrFiscalRegion) -> *mut StdbrCpf {
-    Box::into_raw(Box::new(StdbrCpf(cpf::generate_for_region(
-        region.into_core(),
-    ))))
+pub extern "C" fn stdbr_cpf_create_for_region(region: u8) -> *mut StdbrCpf {
+    let Some(region) = StdbrFiscalRegion::core_from_raw(region) else {
+        return ptr::null_mut();
+    };
+    Box::into_raw(Box::new(StdbrCpf(cpf::generate_for_region(region))))
 }
 
 /// Destroys a CPF handle. `NULL`-safe.
@@ -139,26 +147,31 @@ pub unsafe extern "C" fn stdbr_cpf_masked(cpf: *const StdbrCpf) -> *mut c_char {
     to_c_string(unsafe { &*cpf }.0.masked())
 }
 
-/// Returns the fiscal region.
+/// Returns the fiscal region, or `STDBR_FISCAL_REGION_INVALID` when `cpf` is `NULL`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn stdbr_cpf_fiscal_region(cpf: *const StdbrCpf) -> StdbrFiscalRegion {
     if cpf.is_null() {
-        return StdbrFiscalRegion::Rs;
+        return StdbrFiscalRegion::Invalid;
     }
     StdbrFiscalRegion::from_core(unsafe { &*cpf }.0.fiscal_region())
 }
 
-/// Writes the two check digits to `*d1` and `*d2`.
+/// Writes both check digits and returns `true`; returns `false` for any `NULL` pointer.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn stdbr_cpf_check_digits(cpf: *const StdbrCpf, d1: *mut u8, d2: *mut u8) {
+pub unsafe extern "C" fn stdbr_cpf_check_digits(
+    cpf: *const StdbrCpf,
+    d1: *mut u8,
+    d2: *mut u8,
+) -> bool {
     if cpf.is_null() || d1.is_null() || d2.is_null() {
-        return;
+        return false;
     }
     let (a, b) = unsafe { &*cpf }.0.check_digits();
     unsafe {
         *d1 = a;
         *d2 = b;
     }
+    true
 }
 
 /// Lenient validation strips non-digits before checking.

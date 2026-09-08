@@ -8,15 +8,24 @@
       "changelog-path": "CHANGELOG.md",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
-      "prerelease": true,
-      "prerelease-type": "next",
-      "versioning-strategy": "prerelease",
+      "prerelease": false,
+      "versioning-strategy": "default",
       "plugins": ["cargo-workspace"],
       "extra-files": [
         {
           "type": "json",
           "path": "bindings/nodejs/package.json",
           "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "bindings/nodejs/package-lock.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "bindings/nodejs/package-lock.json",
+          "jsonpath": "$.packages[''].version"
         },
         {
           "type": "json",

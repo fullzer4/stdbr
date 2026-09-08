@@ -36,12 +36,13 @@ pub enum StdbrState {
     SE = 24,
     SP = 25,
     TO = 26,
+    /// Sentinel returned when a state cannot be read.
+    Invalid = 255,
 }
 
 impl StdbrState {
-    pub(crate) fn into_core(self) -> core_uf::State {
-        // SAFETY: both enums are repr(u8) 0..=26 with same variant order.
-        unsafe { core::mem::transmute(self as u8) }
+    pub(crate) fn core_from_raw(value: u8) -> Option<core_uf::State> {
+        core_uf::ALL.get(value as usize).copied()
     }
 
     pub(crate) fn from_core(s: core_uf::State) -> Self {
@@ -59,6 +60,8 @@ pub enum StdbrRegion {
     CentroOeste = 2,
     Sudeste = 3,
     Sul = 4,
+    /// Sentinel returned for an invalid state.
+    Invalid = 255,
 }
 
 impl StdbrRegion {
@@ -68,22 +71,27 @@ impl StdbrRegion {
     }
 }
 
-/// Returns the two-letter abbreviation of a state. Caller frees with `stdbr_free`.
+/// Returns the two-letter abbreviation, or `NULL` for an invalid state. Caller frees with `stdbr_free`.
 #[unsafe(no_mangle)]
-pub extern "C" fn stdbr_state_abbreviation(state: StdbrState) -> *mut c_char {
-    to_c_string(state.into_core().abbreviation().into())
+pub extern "C" fn stdbr_state_abbreviation(state: u8) -> *mut c_char {
+    StdbrState::core_from_raw(state).map_or(ptr::null_mut(), |state| {
+        to_c_string(state.abbreviation().into())
+    })
 }
 
-/// Returns the full name of a state. Caller frees with `stdbr_free`.
+/// Returns the full name, or `NULL` for an invalid state. Caller frees with `stdbr_free`.
 #[unsafe(no_mangle)]
-pub extern "C" fn stdbr_state_name(state: StdbrState) -> *mut c_char {
-    to_c_string(state.into_core().name().into())
+pub extern "C" fn stdbr_state_name(state: u8) -> *mut c_char {
+    StdbrState::core_from_raw(state)
+        .map_or(ptr::null_mut(), |state| to_c_string(state.name().into()))
 }
 
-/// Returns the geographic region of a state.
+/// Returns the geographic region, or `STDBR_REGION_INVALID` for an invalid state.
 #[unsafe(no_mangle)]
-pub extern "C" fn stdbr_state_region(state: StdbrState) -> StdbrRegion {
-    StdbrRegion::from_core(state.into_core().region())
+pub extern "C" fn stdbr_state_region(state: u8) -> StdbrRegion {
+    StdbrState::core_from_raw(state).map_or(StdbrRegion::Invalid, |state| {
+        StdbrRegion::from_core(state.region())
+    })
 }
 
 /// Parse a state from its two-letter abbreviation (case-insensitive).
@@ -112,8 +120,7 @@ pub unsafe extern "C" fn stdbr_state_from_abbreviation(
     }
 }
 
-/// Writes all 27 states to `buf`. `buf` must point to an array of at least 27 elements.
-/// Returns the number of states written (always 27).
+/// Writes all 27 states to `buf`; returns 27 on success or 0 when `buf` is `NULL`.
 ///
 /// # Safety
 /// `buf` must point to a valid array of at least 27 `StdbrState` elements.

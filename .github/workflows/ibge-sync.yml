@@ -1,4 +1,4 @@
-name: IBGE Sync Check
+name: IBGE Municipality Sync
 
 on:
   schedule:
@@ -12,33 +12,76 @@ permissions:
 jobs:
   ibge-sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: ibge-municipality-sync
+      cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/nix-installer-action@b074b4ad5f255f9c8a6a2414a2f07e7f4f2925a3 # main
 
-      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@4119f6e7cfd06aaeee21273b2792c1fcb5d66ba1 # main
 
-      - name: IBGE sync test
-        id: sync_test
+      - name: Check generated data offline
+        run: nix develop --command bazel test //tools/municipio_gen:drift_test
+
+      - name: Fetch live IBGE municipalities
+        id: fetch
+        if: github.event_name == 'schedule'
         continue-on-error: true
-        run: nix develop --command bazel test //tests/parity:parity_rust
+        env:
+          IBGE_URL: https://servicodados.ibge.gov.br/api/v1/localidades/municipios
+        run: |
+          curl --fail --silent --show-error --location \
+            --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 \
+            "$IBGE_URL" --output "$RUNNER_TEMP/ibge-municipios.json"
 
-      - name: Regenerate municipality data
-        if: steps.sync_test.outcome == 'failure'
-        run: nix develop --command cargo run -p parity-gen > /tmp/municipio.rs
+      - name: Report IBGE network failure
+        if: always() && github.event_name == 'schedule' && steps.fetch.outcome == 'failure'
+        run: |
+          echo "::error title=IBGE network failure::The live API could not be downloaded; no files or PR were created."
+          exit 1
 
-      - name: Create Pull Request if out of sync
-        if: steps.sync_test.outcome == 'failure'
-        uses: peter-evans/create-pull-request@v6
+      - name: Regenerate from live response
+        if: github.event_name == 'schedule' && steps.fetch.outcome == 'success'
+        run: |
+          nix develop --command bazel run //tools/municipio_gen -- \
+            generate --input "$RUNNER_TEMP/ibge-municipios.json" --update-source
+
+      - name: Validate regenerated data
+        if: github.event_name == 'schedule' && steps.fetch.outcome == 'success'
+        run: |
+          nix develop --command bazel test \
+            //tools/municipio_gen:drift_test //core:stdbr-core-test
+
+      - name: Detect municipality drift
+        id: drift
+        if: github.event_name == 'schedule' && steps.fetch.outcome == 'success'
+        run: |
+          if git diff --quiet -- core/src/municipio.rs tools/municipio_gen/ibge_municipios.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            status=$?
+            if [ "$status" -ne 1 ]; then
+              exit "$status"
+            fi
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create pull request for municipality drift
+        if: steps.drift.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore(ibge): sync municipalities"
           title: "chore(ibge): sync municipalities"
           body: |
-            Automated IBGE sync detected differences between `core/src/municipio.rs` and the live IBGE API.
+            The scheduled sync detected municipality drift against the live IBGE API.
 
-            This PR regenerates the municipality data. Please review and merge to include it in the next release.
+            This PR updates the normalized source snapshot and the generated region in `core/src/municipio.rs`.
           branch: chore/ibge-sync
           labels: ibge-sync
-          add-paths: core/src/municipio.rs
+          add-paths: |
+            core/src/municipio.rs
+            tools/municipio_gen/ibge_municipios.json

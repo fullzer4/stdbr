@@ -2,13 +2,19 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files([
     "Cargo.toml",
+    "tests/features.rs",
     "tests/parity.rs",
+    "tests/properties.rs",
+    "tests/rng.rs",
 ] + glob(["src/**/*.rs"]))
 
 rust_library(
     name = "stdbr-core",
     srcs = glob(["src/**/*.rs"]),
-    crate_features = ["std"],
+    crate_features = [
+        "municipio",
+        "std",
+    ],
     crate_root = "src/lib.rs",
     visibility = ["//visibility:public"],
 )
@@ -16,4 +22,34 @@ rust_library(
 rust_test(
     name = "stdbr-core-test",
     crate = ":stdbr-core",
+)
+
+rust_test(
+    name = "cep-boundaries-test",
+    size = "small",
+    srcs = ["tests/cep_boundaries.rs"],
+    compile_data = ["//tests/fixtures:cep_ranges.csv"],
+    deps = [":stdbr-core"],
+)
+
+rust_test(
+    name = "features-test",
+    size = "small",
+    srcs = ["tests/features.rs"],
+    crate_features = ["municipio"],
+    deps = [":stdbr-core"],
+)
+
+rust_test(
+    name = "rng-test",
+    size = "small",
+    srcs = ["tests/rng.rs"],
+    deps = [":stdbr-core"],
+)
+
+rust_test(
+    name = "properties-test",
+    size = "small",
+    srcs = ["tests/properties.rs"],
+    deps = [":stdbr-core"],
 )

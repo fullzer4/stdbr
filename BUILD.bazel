@@ -1,1 +1,23 @@
-exports_files(["Cargo.toml", "Cargo.lock", "src/lib.rs"])
+exports_files([
+    "Cargo.toml",
+    "Cargo.lock",
+    "src/lib.rs",
+])
+
+test_suite(
+    name = "all_tests",
+    tests = [
+        "//bindings/ffi-c:stdbr-header-diff-test",
+        "//core:cep-boundaries-test",
+        "//core:features-test",
+        "//core:properties-test",
+        "//core:rng-test",
+        "//core:stdbr-core-test",
+        "//tests/parity:parity_ffi_c",
+        "//tests/parity:parity_nodejs",
+        "//tests/parity:parity_python",
+        "//tests/parity:parity_rust",
+        "//tests/parity:parity_wasm",
+        "//tools/municipio_gen:drift_test",
+    ],
+)

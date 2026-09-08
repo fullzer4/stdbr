@@ -1,7 +1,34 @@
-name: Publish Test (Dry-Run + Test Registries)
+name: Package Smoke Tests
 
 on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        description: Optional git ref used by every build and smoke checkout
+        required: false
+        default: ''
+        type: string
+      expected-version:
+        description: Version that every package must contain
+        required: false
+        default: ''
+        type: string
   workflow_dispatch:
+    inputs:
+      checkout-ref:
+        description: Optional git ref; defaults to the ref selected for this run
+        required: false
+        default: ''
+        type: string
+      expected-version:
+        description: Optional version that every package must contain
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  group: package-smoke-${{ github.workflow }}-${{ inputs['checkout-ref'] || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -9,69 +36,395 @@ permissions:
 env:
   CARGO_INCREMENTAL: 0
   CARGO_NET_RETRY: 10
+  PACKAGE_CHECKOUT_REF: ${{ inputs['checkout-ref'] || github.ref }}
 
 jobs:
-  test-crates:
+  build-crates:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo publish -p stdbr-core --dry-run
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.PACKAGE_CHECKOUT_REF }}
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal
+      - name: Build crate archives without publishing
+        env:
+          RUSTC_BOOTSTRAP: 1
+        run: |
+          cargo -Z package-workspace package --locked --no-verify \
+            -p stdbr-core -p stdbr
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-crates
+          path: target/package/*.crate
+          if-no-files-found: error
+          retention-days: 7
 
-  test-nodejs:
+  smoke-crates:
+    needs: build-crates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.PACKAGE_CHECKOUT_REF }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-crates
+          path: artifacts/crates
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal
+      - name: Consume the exact crate archives in a clean project
+        run: tests/package/smoke-crates.sh artifacts/crates "${{ inputs['expected-version'] }}"
+
+  build-node-native:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          - os: macos-latest
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          - os: macos-15-intel
             target: x86_64-apple-darwin
+          - os: macos-15
+            target: aarch64-apple-darwin
           - os: windows-latest
             target: x86_64-pc-windows-msvc
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.PACKAGE_CHECKOUT_REF }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust target
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal --target "${{ matrix.target }}"
+          rustup default stable
+      - name: Install Zig
+        if: matrix.target == 'aarch64-unknown-linux-gnu' || contains(matrix.target, 'musl')
+        uses: goto-bus-stop/setup-zig@abea47f85e598557f500fa1fd2ab7464fcb39406 # v2.2.1
         with:
-          targets: ${{ matrix.target }}
+          version: 0.13.0
+      - name: Install musl tools
+        if: contains(matrix.target, 'musl')
+        run: sudo apt-get update && sudo apt-get install -y musl-tools musl-dev
       - run: npm ci
         working-directory: bindings/nodejs
-      - run: npx napi build --platform --release --target ${{ matrix.target }}
+      - name: Build native package payload
+        run: npx napi build --platform --release --target "${{ matrix.target }}"
         working-directory: bindings/nodejs
-      - run: npm publish --dry-run
-        working-directory: bindings/nodejs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: node-native-${{ matrix.target }}
+          path: bindings/nodejs/*.node
+          if-no-files-found: error
+          retention-days: 7
 
-  test-wasm:
+  package-node:
+    needs: build-node-native
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: rustwasm/wasm-pack-action@v0.0.4
-      - run: wasm-pack build --release --target web
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.PACKAGE_CHECKOUT_REF }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: artifacts/node-native
+          pattern: node-native-*
+          merge-multiple: true
+      - run: npm ci
+        working-directory: bindings/nodejs
+      - name: Create the main and all platform tgz files
+        run: tools/release/package-node.sh artifacts/node-native artifacts/node
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-node-packages
+          path: artifacts/node/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  smoke-node:
+    needs: package-node
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64-gnu
+          - os: ubuntu-24.04-arm
+            platform: linux-arm64-gnu
+          - os: macos-15-intel
+            platform: darwin-x64
+          - os: macos-15
+            platform: darwin-arm64
+          - os: windows-latest
+            platform: win32-x64-msvc
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.PACKAGE_CHECKOUT_REF }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-node-packages
+          path: artifacts/node
+      - name: Install every exact tgz in a clean project and load the host binary
+        run: node tests/package/smoke-npm.mjs artifacts/node "${{ matrix.platform }}" "${{ inputs['expected-version'] }}"
+
+  smoke-node-musl:
+    needs: package-node
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.PACKAGE_CHECKOUT_REF }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-node-packages
+          path: artifacts/node
+      - name: Install the exact tgz files and load the musl binary in a clean container
+        env:
+          EXPECTED_VERSION: ${{ inputs['expected-version'] }}
+        run: >-
+          docker run --rm
+          --volume "$PWD:/workspace:ro"
+          node:20-alpine
+          node /workspace/tests/package/smoke-npm.mjs
+          /workspace/artifacts/node linux-x64-musl "$EXPECTED_VERSION"
+
+  build-wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.PACKAGE_CHECKOUT_REF }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+      - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # main
+      - name: Install wasm-pack
+        run: cargo binstall wasm-pack@0.13.1 --no-confirm
+      - name: Build the web target
+        run: wasm-pack build --release --target web --out-dir pkg
         working-directory: bindings/wasm
-      - run: npm publish --dry-run
-        working-directory: bindings/wasm/pkg
+      - name: Create the scoped npm tgz
+        run: node tools/release/package-wasm.mjs bindings/wasm/pkg bindings/wasm/package.json artifacts/wasm
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-wasm-package
+          path: artifacts/wasm/*.tgz
+          if-no-files-found: error
+          retention-days: 7
 
-  test-python:
+  smoke-wasm:
+    needs: build-wasm
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: PyO3/maturin-action@v1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.PACKAGE_CHECKOUT_REF }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-wasm-package
+          path: artifacts/wasm
+      - name: Install and instantiate the exact web tgz in a clean project
+        run: node tests/package/smoke-wasm.mjs artifacts/wasm "${{ inputs['expected-version'] }}"
+
+  build-python-wheels:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: Linux-x64
+          - os: macos-15-intel
+            artifact: macOS-x64
+          - os: macos-15
+            artifact: macOS-arm64
+          - os: windows-latest
+            artifact: Windows-x64
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.PACKAGE_CHECKOUT_REF }}
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
         with:
           command: build
-          args: --release
+          maturin-version: v1.9.4
+          args: --release --out dist
+          manylinux: auto
           working-directory: bindings/python
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-python-wheel-${{ matrix.artifact }}
+          path: bindings/python/dist/*.whl
+          if-no-files-found: error
+          retention-days: 7
 
-  test-ffi:
+  build-python-sdist:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: cargo-bins/cargo-binstall@main
-      - run: cargo binstall cbindgen -y
-      - run: cargo build --release -p stdbr-ffi
-      - run: cbindgen --crate stdbr-ffi --output stdbr.h
-      - run: tar czf stdbr-ffi-test.tar.gz target/release/libstdbr.* stdbr.h
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.PACKAGE_CHECKOUT_REF }}
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
+        with:
+          command: sdist
+          maturin-version: v1.9.4
+          args: --out dist
+          working-directory: bindings/python
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-python-sdist
+          path: bindings/python/dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  smoke-python-wheels:
+    needs: build-python-wheels
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: Linux-x64
+          - os: macos-15-intel
+            artifact: macOS-x64
+          - os: macos-15
+            artifact: macOS-arm64
+          - os: windows-latest
+            artifact: Windows-x64
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.PACKAGE_CHECKOUT_REF }}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-python-wheel-${{ matrix.artifact }}
+          path: artifacts/python
+      - name: Install the exact wheel in a clean virtual environment
+        run: python tests/package/smoke-python.py wheel artifacts/python "${{ inputs['expected-version'] }}"
+
+  smoke-python-sdist:
+    needs: build-python-sdist
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.PACKAGE_CHECKOUT_REF }}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Install Rust for the isolated sdist build
+        run: rustup toolchain install stable --profile minimal
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-python-sdist
+          path: artifacts/python
+      - name: Build and install the exact sdist in a clean virtual environment
+        run: python tests/package/smoke-python.py sdist artifacts/python "${{ inputs['expected-version'] }}"
+
+  build-ffi:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: macos-15
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.PACKAGE_CHECKOUT_REF }}
+      - name: Install Rust target
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal --target "${{ matrix.target }}"
+          rustup default stable
+      - name: Build both FFI library kinds
+        run: cargo build --locked --release -p stdbr-ffi --target "${{ matrix.target }}"
+      - name: Create an archive with every required library and the ABI snapshot
+        shell: bash
+        run: tools/release/package-ffi.sh "${{ matrix.target }}" bindings/ffi-c/include/stdbr.h artifacts/ffi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-ffi-${{ matrix.target }}
+          path: artifacts/ffi/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  smoke-ffi:
+    needs: build-ffi
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            shell: bash
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            shell: bash
+          - os: macos-15
+            target: aarch64-apple-darwin
+            shell: bash
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            shell: pwsh
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.PACKAGE_CHECKOUT_REF }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-ffi-${{ matrix.target }}
+          path: artifacts/ffi
+      - name: Link and call the exact FFI archive on Unix
+        if: matrix.shell == 'bash'
+        shell: bash
+        run: tests/package/smoke-ffi.sh artifacts/ffi "${{ matrix.target }}"
+      - name: Load and call the exact FFI archive on Windows
+        if: matrix.shell == 'pwsh'
+        shell: pwsh
+        run: tests/package/smoke-ffi.ps1 artifacts/ffi "${{ matrix.target }}"

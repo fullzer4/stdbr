@@ -8,7 +8,7 @@ requires-python = ">=3.9"
 dependencies = ["polars>=1.0"]
 dynamic = ["version"]
 description = "Polars expression plugin for Brazilian document validation (CPF, CNPJ, CEP)"
-license = { text = "MIT OR Apache-2.0" }
+license = "Apache-2.0"
 
 [tool.maturin]
 python-source = "."

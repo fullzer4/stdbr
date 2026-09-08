@@ -513,4 +513,3 @@ def state_region(state:State) -> Region:
     Get the geographic region of a state.
     """
     ...
-

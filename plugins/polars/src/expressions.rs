@@ -2,7 +2,6 @@ use polars::prelude::*;
 use pyo3_polars::derive::polars_expr;
 use stdbr_core::{cep, cnpj, cpf};
 
-
 #[polars_expr(output_type=Boolean)]
 fn cpf_is_valid(inputs: &[Series]) -> PolarsResult<Series> {
     let ca = inputs[0].str()?;

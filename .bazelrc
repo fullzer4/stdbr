@@ -1,7 +1,16 @@
+startup --host_jvm_args=-Xmx2g
+
 common --enable_bzlmod
+common --repo_env=AR
+common --repo_env=CBINDGEN
+common --repo_env=CC
+common --repo_env=PATH
+build --jobs=2
+build --local_resources=memory=4096
 test --test_output=errors
 test --test_env=HOME
 test --test_env=USER
+build --action_env=AR
 build --action_env=CC
 build --action_env=PATH
 

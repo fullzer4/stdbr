@@ -24,7 +24,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use core::fmt;
 
-use crate::rand::{simple_seed, xorshift64};
+use crate::rand::{RandomSource, SeededRng, below_u8, simple_seed};
 use crate::uf::State;
 
 const RG_MAX_LEN: usize = 14;
@@ -59,6 +59,8 @@ impl fmt::Display for RgError {
         })
     }
 }
+
+impl core::error::Error for RgError {}
 
 /// Per-UF formatting and validation spec.
 #[derive(Clone, Copy)]
@@ -198,10 +200,9 @@ impl fmt::Debug for Rg {
     }
 }
 
-/// Strip dots, dashes, slashes and whitespace. For SP, preserve a trailing
-/// `'X'` (case-insensitive, normalized to uppercase). For other UFs, drop
-/// non-digits.
-pub fn remove_symbols(rg: &str, uf: State) -> String {
+/// Normalizes a permissive RG input. For SP, preserves `X` case-insensitively;
+/// for other UFs, retains only ASCII digits.
+pub fn normalize(rg: &str, uf: State) -> String {
     let spec = uf_spec(uf);
     let mut out = String::with_capacity(rg.len());
     for c in rg.chars() {
@@ -214,11 +215,16 @@ pub fn remove_symbols(rg: &str, uf: State) -> String {
     out
 }
 
+/// Compatibility alias for [`normalize`].
+pub fn remove_symbols(rg: &str, uf: State) -> String {
+    normalize(rg, uf)
+}
+
 /// Lenient validation - strips symbols, then checks length and (for SP) the
 /// check digit.
-pub fn is_valid(rg: &str, uf: State) -> bool {
+pub fn is_valid_lenient(rg: &str, uf: State) -> bool {
     let spec = uf_spec(uf);
-    let raw = remove_symbols(rg, uf);
+    let raw = normalize(rg, uf);
     if !validate_body_length(&raw, spec) {
         return false;
     }
@@ -229,6 +235,13 @@ pub fn is_valid(rg: &str, uf: State) -> bool {
         return sp_check_digit_ok(&raw);
     }
     true
+}
+
+/// Compatibility alias for [`is_valid_lenient`].
+///
+/// Use [`is_valid_strict`] when punctuation and whitespace must be rejected.
+pub fn is_valid(rg: &str, uf: State) -> bool {
+    is_valid_lenient(rg, uf)
 }
 
 /// Strict validation - input must be either the canonical formatted mask or
@@ -290,15 +303,33 @@ pub fn parse_strict(raw: &str, uf: State) -> Result<Rg, RgError> {
 
 /// Generate a random valid RG. SP only; other UFs return
 /// `RgError::UnsupportedUfForGeneration`.
+///
+/// This generation is not cryptographically secure.
 pub fn generate(uf: State) -> Result<Rg, RgError> {
+    let mut rng = SeededRng::new(simple_seed());
+    generate_with_rng(&mut rng, uf)
+}
+
+/// Generate a deterministic valid RG from a seed.
+///
+/// SP only; other UFs return `RgError::UnsupportedUfForGeneration`. This
+/// generation is not cryptographically secure. Seed zero is accepted.
+pub fn generate_with_seed(seed: u64, uf: State) -> Result<Rg, RgError> {
+    let mut rng = SeededRng::new(seed);
+    generate_with_rng(&mut rng, uf)
+}
+
+/// Generate a valid RG using an injected random source.
+///
+/// SP only; other UFs return `RgError::UnsupportedUfForGeneration`. This
+/// generation is not cryptographically secure.
+pub fn generate_with_rng<R: RandomSource + ?Sized>(rng: &mut R, uf: State) -> Result<Rg, RgError> {
     if !matches!(uf, State::SP) {
         return Err(RgError::UnsupportedUfForGeneration);
     }
-    let mut seed = simple_seed();
     let mut digits = [0u8; SP_BASE_LEN];
     for d in &mut digits {
-        seed = xorshift64(seed);
-        *d = (seed % 10) as u8;
+        *d = below_u8(rng, 10);
     }
     let mut body = [0u8; 9];
     for (i, &d) in digits.iter().enumerate() {
@@ -315,19 +346,18 @@ impl Rg {
         bytes[..body.len()].copy_from_slice(body);
         Self {
             bytes,
-            len: body.len() as u8,
+            len: u8::try_from(body.len()).expect("RG body length must fit in u8"),
             uf,
         }
     }
 }
 
 fn validate_body_length(raw: &str, spec: UfSpec) -> bool {
-    match spec.body_len {
-        Some(n) => raw.len() == n as usize,
-        None => {
-            let n = raw.len();
-            n >= STRUCTURAL_MIN_LEN as usize && n <= STRUCTURAL_MAX_LEN as usize
-        }
+    if let Some(n) = spec.body_len {
+        raw.len() == n as usize
+    } else {
+        let n = raw.len();
+        n >= STRUCTURAL_MIN_LEN as usize && n <= STRUCTURAL_MAX_LEN as usize
     }
 }
 
@@ -714,6 +744,14 @@ mod tests {
             let parsed = parse_strict(&formatted, State::SP).unwrap();
             assert_eq!(parsed, rg);
         }
+    }
+
+    #[test]
+    fn seeded_generation_accepts_zero_and_is_deterministic() {
+        let first = generate_with_seed(0, State::SP).unwrap();
+        let second = generate_with_seed(0, State::SP).unwrap();
+        assert_eq!(first, second);
+        assert!(is_valid(first.as_str(), State::SP));
     }
 
     #[test]

@@ -11,13 +11,16 @@ use crate::{cstr_to_str, to_c_string};
 pub enum StdbrCnpjKind {
     Numeric = 0,
     Alphanumeric = 1,
+    /// Sentinel returned when a CNPJ kind cannot be read.
+    Invalid = 255,
 }
 
 impl StdbrCnpjKind {
-    fn into_core(self) -> cnpj::CnpjKind {
-        match self as u8 {
-            0 => cnpj::CnpjKind::Numeric,
-            _ => cnpj::CnpjKind::Alphanumeric,
+    fn core_from_raw(value: u8) -> Option<cnpj::CnpjKind> {
+        match value {
+            0 => Some(cnpj::CnpjKind::Numeric),
+            1 => Some(cnpj::CnpjKind::Alphanumeric),
+            _ => None,
         }
     }
 
@@ -35,6 +38,8 @@ impl StdbrCnpjKind {
 pub enum StdbrEstablishmentType {
     Matriz = 0,
     Filial = 1,
+    /// Sentinel returned when an establishment type cannot be read.
+    Invalid = 255,
 }
 
 impl StdbrEstablishmentType {
@@ -104,16 +109,22 @@ pub unsafe extern "C" fn stdbr_cnpj_parse(
     }
 }
 
-/// Generates a random valid CNPJ.
+/// Generates a random valid CNPJ, or `NULL` if `kind` is invalid.
 #[unsafe(no_mangle)]
-pub extern "C" fn stdbr_cnpj_create(kind: StdbrCnpjKind) -> *mut StdbrCnpj {
-    Box::into_raw(Box::new(StdbrCnpj(cnpj::generate_cnpj(kind.into_core()))))
+pub extern "C" fn stdbr_cnpj_create(kind: u8) -> *mut StdbrCnpj {
+    let Some(kind) = StdbrCnpjKind::core_from_raw(kind) else {
+        return ptr::null_mut();
+    };
+    Box::into_raw(Box::new(StdbrCnpj(cnpj::generate_cnpj(kind))))
 }
 
-/// Generates a random valid CNPJ with ordem "0001" (Matriz).
+/// Generates a Matriz CNPJ, or `NULL` if `kind` is invalid.
 #[unsafe(no_mangle)]
-pub extern "C" fn stdbr_cnpj_create_matriz(kind: StdbrCnpjKind) -> *mut StdbrCnpj {
-    Box::into_raw(Box::new(StdbrCnpj(cnpj::generate_matriz(kind.into_core()))))
+pub extern "C" fn stdbr_cnpj_create_matriz(kind: u8) -> *mut StdbrCnpj {
+    let Some(kind) = StdbrCnpjKind::core_from_raw(kind) else {
+        return ptr::null_mut();
+    };
+    Box::into_raw(Box::new(StdbrCnpj(cnpj::generate_matriz(kind))))
 }
 
 /// Destroys a CNPJ handle. `NULL`-safe.
@@ -151,37 +162,42 @@ pub unsafe extern "C" fn stdbr_cnpj_masked(cnpj: *const StdbrCnpj) -> *mut c_cha
     to_c_string(unsafe { &*cnpj }.0.masked())
 }
 
-/// Returns the CNPJ kind (numeric or alphanumeric).
+/// Returns the CNPJ kind, or `STDBR_CNPJ_KIND_INVALID` when `cnpj` is `NULL`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn stdbr_cnpj_kind(cnpj: *const StdbrCnpj) -> StdbrCnpjKind {
     if cnpj.is_null() {
-        return StdbrCnpjKind::Numeric;
+        return StdbrCnpjKind::Invalid;
     }
     StdbrCnpjKind::from_core(unsafe { &*cnpj }.0.kind())
 }
 
-/// Returns the establishment type (Matriz or Filial).
+/// Returns the establishment type, or `STDBR_ESTABLISHMENT_TYPE_INVALID` when `cnpj` is `NULL`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn stdbr_cnpj_establishment_type(
     cnpj: *const StdbrCnpj,
 ) -> StdbrEstablishmentType {
     if cnpj.is_null() {
-        return StdbrEstablishmentType::Matriz;
+        return StdbrEstablishmentType::Invalid;
     }
     StdbrEstablishmentType::from_core(unsafe { &*cnpj }.0.establishment_type())
 }
 
-/// Writes the two check digits to `*d1` and `*d2`.
+/// Writes both check digits and returns `true`; returns `false` for any `NULL` pointer.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn stdbr_cnpj_check_digits(cnpj: *const StdbrCnpj, d1: *mut u8, d2: *mut u8) {
+pub unsafe extern "C" fn stdbr_cnpj_check_digits(
+    cnpj: *const StdbrCnpj,
+    d1: *mut u8,
+    d2: *mut u8,
+) -> bool {
     if cnpj.is_null() || d1.is_null() || d2.is_null() {
-        return;
+        return false;
     }
     let (a, b) = unsafe { &*cnpj }.0.check_digits();
     unsafe {
         *d1 = a;
         *d2 = b;
     }
+    true
 }
 
 /// Lenient validation strips non-alphanumeric chars before checking.
@@ -202,10 +218,12 @@ pub unsafe extern "C" fn stdbr_cnpj_is_valid_strict(raw: *const c_char) -> Stdbr
     }
 }
 
-/// Random valid CNPJ as 14-character string. Caller frees with `stdbr_free`.
+/// Returns a random CNPJ string, or `NULL` if `kind` is invalid. Caller frees with `stdbr_free`.
 #[unsafe(no_mangle)]
-pub extern "C" fn stdbr_cnpj_generate(kind: StdbrCnpjKind) -> *mut c_char {
-    to_c_string(cnpj::generate(kind.into_core()))
+pub extern "C" fn stdbr_cnpj_generate(kind: u8) -> *mut c_char {
+    StdbrCnpjKind::core_from_raw(kind)
+        .map(cnpj::generate)
+        .map_or(ptr::null_mut(), to_c_string)
 }
 
 /// Formats as `XX.XXX.XXX/XXXX-DD`, or `NULL` if invalid. Caller frees with `stdbr_free`.

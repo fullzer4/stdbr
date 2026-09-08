@@ -121,7 +121,7 @@ static void test_cpf(cJSON *cpf_json) {
         ASSERT_INT_EQ(stdbr_cpf_fiscal_region(cpf), fiscal_region, "cpf fiscal_region");
 
         uint8_t d1, d2;
-        stdbr_cpf_check_digits(cpf, &d1, &d2);
+        ASSERT_BOOL_EQ(stdbr_cpf_check_digits(cpf, &d1, &d2), true, "cpf check_digits status");
         ASSERT_INT_EQ(d1, cd0, "cpf check_digit[0]");
         ASSERT_INT_EQ(d2, cd1, "cpf check_digit[1]");
 
@@ -232,7 +232,7 @@ static void test_cnpj(cJSON *cnpj_json) {
         ASSERT_INT_EQ(stdbr_cnpj_establishment_type(cnpj), est_type, "cnpj establishment_type");
 
         uint8_t d1, d2;
-        stdbr_cnpj_check_digits(cnpj, &d1, &d2);
+        ASSERT_BOOL_EQ(stdbr_cnpj_check_digits(cnpj, &d1, &d2), true, "cnpj check_digits status");
         ASSERT_INT_EQ(d1, cd0, "cnpj check_digit[0]");
         ASSERT_INT_EQ(d2, cd1, "cnpj check_digit[1]");
 
@@ -732,6 +732,87 @@ static void test_municipio(cJSON *mun_json) {
     }
 }
 
+static void test_ffi_hardening(void) {
+    printf("  FFI hardening...\n");
+
+    const uint8_t invalid = UINT8_MAX - 1;
+    ASSERT_NULL(stdbr_state_abbreviation(invalid), "invalid state abbreviation");
+    ASSERT_NULL(stdbr_state_name(invalid), "invalid state name");
+    ASSERT_INT_EQ(stdbr_state_region(invalid), STDBR_REGION_INVALID, "invalid state region");
+
+    ASSERT_NULL(stdbr_cpf_create_for_region(invalid), "invalid CPF region");
+    ASSERT_NULL(stdbr_cnpj_create(invalid), "invalid CNPJ kind create");
+    ASSERT_NULL(stdbr_cnpj_create_matriz(invalid), "invalid CNPJ kind matriz");
+    ASSERT_NULL(stdbr_cnpj_generate(invalid), "invalid CNPJ kind generate");
+    ASSERT_NULL(stdbr_cep_create_for_region(invalid), "invalid CEP region");
+    ASSERT_NULL(stdbr_cep_create_for_state(invalid), "invalid CEP state");
+    ASSERT_NULL(stdbr_municipio_capital_of(invalid), "invalid capital state");
+    ASSERT_NULL(stdbr_municipio_by_state(invalid), "invalid municipio state");
+
+    StdbrRgError rg_err = STDBR_RG_ERROR_OK;
+    ASSERT_NULL(stdbr_rg_parse("12", invalid, &rg_err), "invalid RG parse state");
+    ASSERT_INT_EQ(rg_err, STDBR_RG_ERROR_INVALID_UF, "invalid RG parse error");
+    ASSERT_NULL(stdbr_rg_create_for_uf(invalid, &rg_err), "invalid RG create state");
+    ASSERT_INT_EQ(rg_err, STDBR_RG_ERROR_INVALID_UF, "invalid RG create error");
+    ASSERT_BOOL_EQ(stdbr_rg_is_valid("12", invalid), false, "invalid RG validation state");
+    ASSERT_INT_EQ(stdbr_rg_is_valid_strict("12", invalid), STDBR_RG_ERROR_INVALID_UF,
+                  "invalid RG strict state");
+    ASSERT_NULL(stdbr_rg_format("12", invalid), "invalid RG format state");
+    ASSERT_NULL(stdbr_rg_remove_symbols("12", invalid), "invalid RG remove state");
+    ASSERT_BOOL_EQ(stdbr_rg_compute_check_digit("12", invalid, &(uint8_t){0}), false,
+                   "invalid RG check digit state");
+    ASSERT_NULL(stdbr_rg_generate(invalid, &rg_err), "invalid RG generate state");
+    ASSERT_INT_EQ(rg_err, STDBR_RG_ERROR_INVALID_UF, "invalid RG generate error");
+
+    ASSERT_NULL(stdbr_cpf_as_str(NULL), "NULL CPF string");
+    ASSERT_INT_EQ(stdbr_cpf_fiscal_region(NULL), STDBR_FISCAL_REGION_INVALID,
+                  "NULL CPF fiscal region");
+    ASSERT_BOOL_EQ(stdbr_cpf_check_digits(NULL, &(uint8_t){0}, &(uint8_t){0}), false,
+                   "NULL CPF check digits");
+    ASSERT_INT_EQ(stdbr_cnpj_kind(NULL), STDBR_CNPJ_KIND_INVALID, "NULL CNPJ kind");
+    ASSERT_INT_EQ(stdbr_cnpj_establishment_type(NULL), STDBR_ESTABLISHMENT_TYPE_INVALID,
+                  "NULL CNPJ establishment type");
+    ASSERT_BOOL_EQ(stdbr_cnpj_check_digits(NULL, &(uint8_t){0}, &(uint8_t){0}), false,
+                   "NULL CNPJ check digits");
+    ASSERT_INT_EQ(stdbr_cep_postal_region(NULL), STDBR_POSTAL_REGION_INVALID,
+                  "NULL CEP postal region");
+    ASSERT_BOOL_EQ(stdbr_cep_state(NULL, &(StdbrState){0}), false, "NULL CEP state");
+    ASSERT_INT_EQ(stdbr_rg_uf(NULL), STDBR_STATE_INVALID, "NULL RG state");
+    ASSERT_BOOL_EQ(stdbr_rg_check_digit(NULL, &(uint8_t){0}), false, "NULL RG check digit");
+    ASSERT_INT_EQ(stdbr_municipio_ibge_code(NULL), 0, "NULL municipio IBGE code");
+    ASSERT_INT_EQ(stdbr_municipio_state(NULL), STDBR_STATE_INVALID, "NULL municipio state");
+    ASSERT_INT_EQ(stdbr_municipio_list_count(NULL), UINT32_MAX, "NULL municipio list count");
+    ASSERT_NULL(stdbr_municipio_list_get(NULL, 0), "NULL municipio list get");
+    ASSERT_NULL(stdbr_municipio_search_by_name(NULL), "NULL municipio search");
+    ASSERT_BOOL_EQ(stdbr_state_from_abbreviation(NULL, &(StdbrState){0}), false,
+                   "NULL state abbreviation input");
+    ASSERT_BOOL_EQ(stdbr_state_from_abbreviation("SP", NULL), false, "NULL state output");
+    ASSERT_INT_EQ(stdbr_all_states(NULL), 0, "NULL all states output");
+
+    StdbrMunicipioList *list = stdbr_municipio_by_state(STDBR_STATE_SP);
+    ASSERT_NOT_NULL(list, "ownership municipio list");
+    if (list) {
+        uint32_t count = stdbr_municipio_list_count(list);
+        ASSERT_NULL(stdbr_municipio_list_get(list, count), "municipio list out of range");
+        StdbrMunicipio *owned = stdbr_municipio_list_get(list, 0);
+        ASSERT_NOT_NULL(owned, "owned municipio from list");
+        stdbr_municipio_list_destroy(list);
+        if (owned) {
+            ASSERT_BOOL_EQ(stdbr_municipio_ibge_code(owned) != 0, true,
+                           "owned municipio survives list");
+            stdbr_municipio_destroy(owned);
+        }
+    }
+
+    stdbr_free(NULL);
+    stdbr_cpf_destroy(NULL);
+    stdbr_cnpj_destroy(NULL);
+    stdbr_cep_destroy(NULL);
+    stdbr_rg_destroy(NULL);
+    stdbr_municipio_destroy(NULL);
+    stdbr_municipio_list_destroy(NULL);
+}
+
 int main(void) {
     const char *golden_path = getenv("GOLDEN_JSON");
     if (!golden_path) {
@@ -773,6 +854,7 @@ int main(void) {
     test_rg(cJSON_GetObjectItem(golden, "rg"));
     test_uf(cJSON_GetObjectItem(golden, "uf"));
     test_municipio(cJSON_GetObjectItem(golden, "municipio"));
+    test_ffi_hardening();
 
     cJSON_Delete(golden);
 

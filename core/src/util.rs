@@ -1,6 +1,6 @@
 /// Returns `true` if all elements in the slice are equal.
 pub(crate) fn all_equal(bytes: &[u8]) -> bool {
-    bytes.iter().all(|&v| v == bytes[0])
+    bytes.windows(2).all(|pair| pair[0] == pair[1])
 }
 
 /// Generates boilerplate trait implementations for document structs.

@@ -5,7 +5,7 @@ fn cnpj_err(e: &core_cnpj::CnpjError) -> PyErr {
     pyo3::exceptions::PyValueError::new_err(e.to_string())
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum CnpjKind {
     Numeric = 0,
@@ -30,7 +30,7 @@ impl From<core_cnpj::CnpjKind> for CnpjKind {
     }
 }
 
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum EstablishmentType {
     Matriz = 0,

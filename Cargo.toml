@@ -10,9 +10,15 @@ homepage.workspace = true
 readme.workspace = true
 keywords.workspace = true
 categories.workspace = true
+include = ["/src/**", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [dependencies]
-stdbr-core = { path = "core", version = "0.3.1" }
+stdbr-core = { path = "core", version = "0.3.1", default-features = false }
+
+[features]
+default = ["std", "municipio"]
+municipio = ["stdbr-core/municipio"]
+std = ["stdbr-core/std"]
 
 [workspace]
 resolver = "2"
@@ -20,10 +26,10 @@ members = ["core", "bindings/ffi-c", "bindings/nodejs", "bindings/python", "bind
 exclude = ["plugins/polars"]
 
 [workspace.package]
-version = "0.0.1"
+version = "0.3.1"
 edition = "2024"
 rust-version = "1.85.0"
-license = "MIT OR Apache-2.0"
+license = "Apache-2.0"
 description = "Standard library for Brazil"
 repository = "https://github.com/fullzer4/stdbr"
 homepage = "https://github.com/fullzer4/stdbr"

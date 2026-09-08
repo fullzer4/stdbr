@@ -19,6 +19,7 @@ pub struct Municipio {
     pub state: State,
 }
 
+// BEGIN GENERATED MUNICIPIO DATA - run: bazel run //tools/municipio_gen -- generate
 #[allow(clippy::unreadable_literal)]
 pub const ALL: &[Municipio] = &[
     Municipio {
@@ -27877,6 +27878,7 @@ pub const ALL: &[Municipio] = &[
         state: State::TO,
     },
 ];
+// END GENERATED MUNICIPIO DATA
 
 /// IBGE codes of the 27 state capitals, ordered to match [`crate::uf::ALL`].
 #[allow(clippy::unreadable_literal)]

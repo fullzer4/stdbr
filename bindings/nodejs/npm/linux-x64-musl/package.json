@@ -11,9 +11,9 @@
     "musl"
   ],
   "main": "stdbr.linux-x64-musl.node",
-  "license": "MIT OR Apache-2.0",
+  "license": "Apache-2.0",
   "engines": {
-    "node": ">= 10"
+    "node": ">=18.17.0"
   },
   "publishConfig": {
     "access": "public"

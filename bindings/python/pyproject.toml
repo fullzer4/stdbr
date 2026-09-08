@@ -7,15 +7,26 @@ name = "stdbr"
 version = "0.3.1"
 description = "Standard library for Brazil"
 readme = "README.md"
-license = "MIT OR Apache-2.0"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "stdbr contributors" }]
 requires-python = ">=3.9"
+keywords = ["brazil", "cep", "cnpj", "cpf", "validation"]
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "License :: OSI Approved :: Apache Software License",
-    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
 ]
 
+[project.urls]
+Homepage = "https://github.com/fullzer4/stdbr"
+Repository = "https://github.com/fullzer4/stdbr"
+Issues = "https://github.com/fullzer4/stdbr/issues"
+
 [tool.maturin]
-features = ["pyo3/extension-module"]
+module-name = "stdbr.stdbr"
+python-source = "python"

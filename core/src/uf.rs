@@ -170,36 +170,8 @@ impl State {
 
     /// Parse from a two-letter abbreviation (case-insensitive).
     pub fn from_abbreviation(s: &str) -> Option<Self> {
-        match s.as_bytes() {
-            b"AC" | b"ac" | b"Ac" => Some(State::AC),
-            b"AL" | b"al" | b"Al" => Some(State::AL),
-            b"AM" | b"am" | b"Am" => Some(State::AM),
-            b"AP" | b"ap" | b"Ap" => Some(State::AP),
-            b"BA" | b"ba" | b"Ba" => Some(State::BA),
-            b"CE" | b"ce" | b"Ce" => Some(State::CE),
-            b"DF" | b"df" | b"Df" => Some(State::DF),
-            b"ES" | b"es" | b"Es" => Some(State::ES),
-            b"GO" | b"go" | b"Go" => Some(State::GO),
-            b"MA" | b"ma" | b"Ma" => Some(State::MA),
-            b"MG" | b"mg" | b"Mg" => Some(State::MG),
-            b"MS" | b"ms" | b"Ms" => Some(State::MS),
-            b"MT" | b"mt" | b"Mt" => Some(State::MT),
-            b"PA" | b"pa" | b"Pa" => Some(State::PA),
-            b"PB" | b"pb" | b"Pb" => Some(State::PB),
-            b"PE" | b"pe" | b"Pe" => Some(State::PE),
-            b"PI" | b"pi" | b"Pi" => Some(State::PI),
-            b"PR" | b"pr" | b"Pr" => Some(State::PR),
-            b"RJ" | b"rj" | b"Rj" => Some(State::RJ),
-            b"RN" | b"rn" | b"Rn" => Some(State::RN),
-            b"RO" | b"ro" | b"Ro" => Some(State::RO),
-            b"RR" | b"rr" | b"Rr" => Some(State::RR),
-            b"RS" | b"rs" | b"Rs" => Some(State::RS),
-            b"SC" | b"sc" | b"Sc" => Some(State::SC),
-            b"SE" | b"se" | b"Se" => Some(State::SE),
-            b"SP" | b"sp" | b"Sp" => Some(State::SP),
-            b"TO" | b"to" | b"To" => Some(State::TO),
-            _ => None,
-        }
+        ALL.into_iter()
+            .find(|state| state.abbreviation().eq_ignore_ascii_case(s))
     }
 }
 
@@ -241,9 +213,20 @@ mod tests {
 
     #[test]
     fn from_abbreviation_case_insensitive() {
-        assert_eq!(State::from_abbreviation("sp"), Some(State::SP));
-        assert_eq!(State::from_abbreviation("SP"), Some(State::SP));
-        assert_eq!(State::from_abbreviation("Sp"), Some(State::SP));
+        for state in ALL {
+            let [first, second] = state.abbreviation().as_bytes() else {
+                unreachable!()
+            };
+            for abbreviation in [
+                [*first, *second],
+                [first.to_ascii_lowercase(), *second],
+                [*first, second.to_ascii_lowercase()],
+                [first.to_ascii_lowercase(), second.to_ascii_lowercase()],
+            ] {
+                let abbreviation = core::str::from_utf8(&abbreviation).unwrap();
+                assert_eq!(State::from_abbreviation(abbreviation), Some(state));
+            }
+        }
         assert_eq!(State::from_abbreviation("XX"), None);
         assert_eq!(State::from_abbreviation(""), None);
     }

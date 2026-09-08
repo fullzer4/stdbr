@@ -4,14 +4,19 @@
 )]
 
 use serde_json::Value;
+#[cfg(feature = "municipio")]
 use std::collections::HashMap;
-use stdbr_core::{cep, cnpj, cpf, municipio, rg, uf};
+#[cfg(feature = "municipio")]
+use stdbr_core::municipio;
+use stdbr_core::{cep, cnpj, cpf, rg, uf};
 
 fn golden() -> Value {
-    let path =
-        std::env::var("GOLDEN_JSON").unwrap_or_else(|_| "tests/parity/golden.json".to_string());
+    let path = std::env::var_os("GOLDEN_JSON").map_or_else(
+        || std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/parity/golden.json"),
+        std::path::PathBuf::from,
+    );
     let json = std::fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("failed to read {path}: {e} (run via bazel test)"));
+        .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
     serde_json::from_str(&json).expect("failed to parse golden.json")
 }
 
@@ -485,12 +490,14 @@ fn uf_from_abbreviation() {
 // ── Municipio ────────────────────────────────────────────────────────
 
 #[test]
+#[cfg(feature = "municipio")]
 fn municipio_count() {
     let expected = golden()["municipio"]["count"].as_u64().unwrap() as usize;
     assert_eq!(municipio::ALL.len(), expected);
 }
 
 #[test]
+#[cfg(feature = "municipio")]
 fn municipio_from_ibge_code() {
     let cases = &golden()["municipio"]["from_ibge_code"];
     for case in cases.as_array().unwrap() {
@@ -508,6 +515,7 @@ fn municipio_from_ibge_code() {
 }
 
 #[test]
+#[cfg(feature = "municipio")]
 fn municipio_capital_of() {
     let cases = &golden()["municipio"]["capital_of"];
     for case in cases.as_array().unwrap() {
@@ -523,6 +531,7 @@ fn municipio_capital_of() {
 }
 
 #[test]
+#[cfg(feature = "municipio")]
 fn municipio_search_by_name() {
     let cases = &golden()["municipio"]["search_by_name"];
     for case in cases.as_array().unwrap() {
@@ -540,6 +549,7 @@ fn municipio_search_by_name() {
 }
 
 #[test]
+#[cfg(feature = "municipio")]
 fn municipio_by_state_count() {
     let cases = &golden()["municipio"]["by_state_count"];
     for case in cases.as_array().unwrap() {
@@ -556,6 +566,7 @@ fn municipio_by_state_count() {
 
 // ── Municipio IBGE sync ──────────────────────────────────────────────
 
+#[cfg(feature = "municipio")]
 fn ibge_source() -> Vec<(u32, String, String)> {
     let g = golden();
     let arr = g["municipio"]["ibge_source"]
@@ -572,6 +583,7 @@ fn ibge_source() -> Vec<(u32, String, String)> {
 }
 
 #[test]
+#[cfg(feature = "municipio")]
 fn ibge_count_matches() {
     let ibge = ibge_source();
     assert_eq!(
@@ -584,6 +596,7 @@ fn ibge_count_matches() {
 }
 
 #[test]
+#[cfg(feature = "municipio")]
 fn ibge_every_entry_exists_in_hardcoded() {
     let ibge = ibge_source();
     let hardcoded: HashMap<u32, &municipio::Municipio> =
@@ -603,6 +616,7 @@ fn ibge_every_entry_exists_in_hardcoded() {
 }
 
 #[test]
+#[cfg(feature = "municipio")]
 fn ibge_every_hardcoded_exists_in_source() {
     let ibge = ibge_source();
     let ibge_ids: HashMap<u32, _> = ibge.iter().map(|(id, n, u)| (*id, (n, u))).collect();
@@ -621,6 +635,7 @@ fn ibge_every_hardcoded_exists_in_source() {
 }
 
 #[test]
+#[cfg(feature = "municipio")]
 fn ibge_names_match() {
     let ibge = ibge_source();
     let ibge_map: HashMap<u32, (&str, &str)> = ibge
@@ -647,6 +662,7 @@ fn ibge_names_match() {
 }
 
 #[test]
+#[cfg(feature = "municipio")]
 fn ibge_states_match() {
     let ibge = ibge_source();
     let ibge_map: HashMap<u32, (&str, &str)> = ibge

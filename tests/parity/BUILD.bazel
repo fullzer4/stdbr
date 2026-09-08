@@ -1,5 +1,5 @@
-load("@rules_rust//rust:defs.bzl", "rust_test")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_rust//rust:defs.bzl", "rust_test")
 
 GOLDEN_ENV = {"GOLDEN_JSON": "$(rootpath :gen_golden)"}
 
@@ -12,21 +12,24 @@ filegroup(
 rust_test(
     name = "parity_rust",
     srcs = ["//core:tests/parity.rs"],
-    deps = ["//core:stdbr-core", "@crates//:serde_json"],
     data = [":gen_golden"],
     env = GOLDEN_ENV,
+    deps = [
+        "//core:stdbr-core",
+        "@crates//:serde_json",
+    ],
 )
 
 cc_test(
     name = "parity_ffi_c",
     srcs = ["//bindings/ffi-c:test_parity.c"],
+    data = [":gen_golden"],
+    env = GOLDEN_ENV,
     deps = [
         "//bindings/ffi-c:stdbr-ffi-static",
         "//bindings/ffi-c:stdbr-header",
         "@cjson",
     ],
-    data = [":gen_golden"],
-    env = GOLDEN_ENV,
 )
 
 write_file(
@@ -49,12 +52,12 @@ sh_test(
     data = [
         ":gen_golden",
         "//bindings/nodejs:stdbr-node",
-        "//bindings/nodejs:test_parity.js",
+        "//bindings/nodejs:test_parity.mjs",
     ],
     env = {
         "GOLDEN_JSON": "$(rootpath :gen_golden)",
         "STDBR_NODE": "$(rootpath //bindings/nodejs:stdbr-node)",
-        "STDBR_TEST_JS": "$(rootpath //bindings/nodejs:test_parity.js)",
+        "STDBR_TEST_JS": "$(rootpath //bindings/nodejs:test_parity.mjs)",
     },
 )
 
@@ -95,7 +98,7 @@ write_file(
         "set -euo pipefail",
         'RUNFILES="${TEST_SRCDIR}/${TEST_WORKSPACE}"',
         'export GOLDEN_JSON="${RUNFILES}/${GOLDEN_JSON}"',
-        'for f in $WASM_PKG_FILES; do',
+        "for f in $WASM_PKG_FILES; do",
         '  case "$f" in *.js) export WASM_PKG="${RUNFILES}/$f"; break;; esac',
         "done",
         'exec node --test "${RUNFILES}/${STDBR_TEST_JS}"',

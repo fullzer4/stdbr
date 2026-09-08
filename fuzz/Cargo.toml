@@ -1,0 +1,44 @@
+[package]
+name = "stdbr-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+stdbr-core = { path = "../core" }
+
+[[bin]]
+name = "cpf"
+path = "fuzz_targets/cpf.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "cnpj"
+path = "fuzz_targets/cnpj.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "cep"
+path = "fuzz_targets/cep.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "rg"
+path = "fuzz_targets/rg.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
+members = ["."]
+resolver = "2"

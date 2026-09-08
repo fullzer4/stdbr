@@ -7,7 +7,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use core::fmt;
 
-use crate::rand::{simple_seed, xorshift64};
+use crate::rand::{RandomSource, SeededRng, below_u8, simple_seed};
 use crate::util::{self, impl_document_traits};
 
 const CNPJ_LEN: usize = 14;
@@ -51,6 +51,8 @@ impl fmt::Display for CnpjError {
         })
     }
 }
+
+impl core::error::Error for CnpjError {}
 
 /// A validated CNPJ stored as 14 ASCII bytes.
 ///
@@ -136,8 +138,9 @@ impl fmt::Display for Cnpj {
 
 impl_document_traits!(Cnpj, CnpjError);
 
-/// Strips punctuation, preserves letters and digits, uppercases letters.
-pub fn remove_symbols(cnpj: &str) -> String {
+/// Normalizes a permissive CNPJ input by retaining ASCII alphanumeric
+/// characters and uppercasing letters.
+pub fn normalize(cnpj: &str) -> String {
     cnpj.chars()
         .filter(char::is_ascii_alphanumeric)
         .map(|c| c.to_ascii_uppercase())
@@ -145,8 +148,8 @@ pub fn remove_symbols(cnpj: &str) -> String {
 }
 
 /// Lenient validation: strips punctuation, uppercases, then validates.
-pub fn is_valid(cnpj: &str) -> bool {
-    let raw = remove_symbols(cnpj);
+pub fn is_valid_lenient(cnpj: &str) -> bool {
+    let raw = normalize(cnpj);
     if raw.len() != CNPJ_LEN {
         return false;
     }
@@ -162,6 +165,19 @@ pub fn is_valid(cnpj: &str) -> bool {
         return false;
     }
     validate(bytes)
+}
+
+/// Compatibility alias for [`normalize`].
+pub fn remove_symbols(cnpj: &str) -> String {
+    normalize(cnpj)
+}
+
+/// Compatibility alias for [`is_valid_lenient`].
+///
+/// Use [`is_valid_strict`] when case, punctuation, and whitespace must be
+/// checked.
+pub fn is_valid(cnpj: &str) -> bool {
+    is_valid_lenient(cnpj)
 }
 
 /// Strict validation - accepts `XX.XXX.XXX/XXXX-DD` or `XXXXXXXXXXXXXXDD` only.
@@ -196,18 +212,56 @@ pub fn format_cnpj(cnpj: &str) -> Option<String> {
 }
 
 /// Generates a random valid CNPJ as a 14-character string.
+///
+/// This generation is not cryptographically secure.
 pub fn generate(kind: CnpjKind) -> String {
     generate_cnpj(kind).as_str().into()
 }
 
 /// Generates a random valid [`Cnpj`].
+///
+/// This generation is not cryptographically secure.
 pub fn generate_cnpj(kind: CnpjKind) -> Cnpj {
-    generate_with_seed(simple_seed(), kind)
+    let mut rng = SeededRng::new(simple_seed());
+    generate_cnpj_with_rng(&mut rng, kind)
+}
+
+/// Generates a valid [`Cnpj`] using an injected random source.
+///
+/// This generation is not cryptographically secure.
+pub fn generate_cnpj_with_rng<R: RandomSource + ?Sized>(rng: &mut R, kind: CnpjKind) -> Cnpj {
+    generate_with_rng(rng, kind)
 }
 
 /// Generates a random valid [`Cnpj`] with ordem "0001" (Matriz).
+///
+/// This generation is not cryptographically secure.
 pub fn generate_matriz(kind: CnpjKind) -> Cnpj {
-    generate_with_ordem(simple_seed(), kind, *b"0001")
+    let mut rng = SeededRng::new(simple_seed());
+    generate_matriz_with_rng(&mut rng, kind)
+}
+
+/// Generates a deterministic valid [`Cnpj`] from a seed.
+///
+/// This generation is not cryptographically secure. Seed zero is accepted.
+pub fn generate_with_seed(seed: u64, kind: CnpjKind) -> Cnpj {
+    let mut rng = SeededRng::new(seed);
+    generate_with_rng(&mut rng, kind)
+}
+
+/// Generates a deterministic valid Matriz [`Cnpj`] from a seed.
+///
+/// This generation is not cryptographically secure. Seed zero is accepted.
+pub fn generate_matriz_with_seed(seed: u64, kind: CnpjKind) -> Cnpj {
+    let mut rng = SeededRng::new(seed);
+    generate_matriz_with_rng(&mut rng, kind)
+}
+
+/// Generates a valid Matriz [`Cnpj`] using an injected random source.
+///
+/// This generation is not cryptographically secure.
+pub fn generate_matriz_with_rng<R: RandomSource + ?Sized>(rng: &mut R, kind: CnpjKind) -> Cnpj {
+    generate_with_ordem(rng, kind, *b"0001")
 }
 
 /// Computes check digits for a 12-character CNPJ base.
@@ -251,7 +305,7 @@ fn all_equal(bytes: &[u8]) -> bool {
 }
 
 fn validate(bytes: &[u8]) -> bool {
-    if all_equal(bytes) {
+    if all_equal(&bytes[..12]) {
         return false;
     }
     let values: Vec<u32> = bytes[..12].iter().map(|&b| char_value(b)).collect();
@@ -319,7 +373,7 @@ fn parse_strict(s: &str) -> Result<Cnpj, CnpjError> {
         _ => return Err(CnpjError::InvalidLength),
     };
 
-    if all_equal(&chars) {
+    if all_equal(&chars[..12]) {
         return Err(CnpjError::AllCharsEqual);
     }
 
@@ -341,18 +395,20 @@ fn parse_strict(s: &str) -> Result<Cnpj, CnpjError> {
 
 const ALPHANUMERIC_CHARS: &[u8; 36] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-fn generate_with_seed(mut seed: u64, kind: CnpjKind) -> Cnpj {
+/// Generates a valid [`Cnpj`] using an injected random source.
+///
+/// This generation is not cryptographically secure.
+pub fn generate_with_rng<R: RandomSource + ?Sized>(rng: &mut R, kind: CnpjKind) -> Cnpj {
     let mut bytes = [0u8; CNPJ_LEN];
 
     loop {
         for b in &mut bytes[..12] {
-            seed = xorshift64(seed);
             *b = match kind {
-                CnpjKind::Numeric => b'0' + (seed % 10) as u8,
-                CnpjKind::Alphanumeric => ALPHANUMERIC_CHARS[(seed % 36) as usize],
+                CnpjKind::Numeric => b'0' + below_u8(rng, 10),
+                CnpjKind::Alphanumeric => ALPHANUMERIC_CHARS[usize::from(below_u8(rng, 36))],
             };
         }
-        if !all_equal(&bytes[..12]) {
+        if generated_base_is_valid(&bytes[..12], kind) {
             break;
         }
     }
@@ -361,25 +417,32 @@ fn generate_with_seed(mut seed: u64, kind: CnpjKind) -> Cnpj {
     Cnpj { bytes }
 }
 
-fn generate_with_ordem(mut seed: u64, kind: CnpjKind, ordem: [u8; 4]) -> Cnpj {
+fn generate_with_ordem<R: RandomSource + ?Sized>(
+    rng: &mut R,
+    kind: CnpjKind,
+    ordem: [u8; 4],
+) -> Cnpj {
     let mut bytes = [0u8; CNPJ_LEN];
     bytes[8..12].copy_from_slice(&ordem);
 
     loop {
         for b in &mut bytes[..8] {
-            seed = xorshift64(seed);
             *b = match kind {
-                CnpjKind::Numeric => b'0' + (seed % 10) as u8,
-                CnpjKind::Alphanumeric => ALPHANUMERIC_CHARS[(seed % 36) as usize],
+                CnpjKind::Numeric => b'0' + below_u8(rng, 10),
+                CnpjKind::Alphanumeric => ALPHANUMERIC_CHARS[usize::from(below_u8(rng, 36))],
             };
         }
-        if !all_equal(&bytes[..12]) {
+        if generated_base_is_valid(&bytes[..12], kind) {
             break;
         }
     }
 
     append_check_digits(&mut bytes);
     Cnpj { bytes }
+}
+
+fn generated_base_is_valid(base: &[u8], kind: CnpjKind) -> bool {
+    !all_equal(base) && (kind == CnpjKind::Numeric || base.iter().any(u8::is_ascii_uppercase))
 }
 
 #[cfg(test)]
@@ -474,6 +537,17 @@ mod tests {
         assert!(!is_valid("11111111111111"));
         assert!(!is_valid("00000000000000"));
         assert!(!is_valid("AAAAAAAAAAAAAA"));
+    }
+
+    #[test]
+    fn all_equal_rule_applies_to_the_registration_base() {
+        let repeated_base = make_cnpj(b"111111111111");
+        assert!(!is_valid(repeated_base.as_str()));
+        assert_eq!(
+            is_valid_strict(repeated_base.as_str()),
+            Err(CnpjError::AllCharsEqual)
+        );
+        assert_eq!(compute_check_digits("111111111111"), None);
     }
 
     #[test]
@@ -666,6 +740,19 @@ mod tests {
             let cnpj = generate(CnpjKind::Alphanumeric);
             assert_eq!(cnpj.len(), 14);
             assert!(is_valid(&cnpj), "generated invalid CNPJ: {cnpj}");
+            assert!(cnpj[..12].bytes().any(|b| b.is_ascii_uppercase()));
+        }
+    }
+
+    #[test]
+    fn seeded_alphanumeric_generation_always_contains_a_letter() {
+        for seed in 0..1_000 {
+            let cnpj = generate_with_seed(seed, CnpjKind::Alphanumeric);
+            assert_eq!(cnpj.kind(), CnpjKind::Alphanumeric, "seed {seed}");
+
+            let matriz = generate_matriz_with_seed(seed, CnpjKind::Alphanumeric);
+            assert_eq!(matriz.kind(), CnpjKind::Alphanumeric, "seed {seed}");
+            assert_eq!(matriz.ordem(), "0001");
         }
     }
 
