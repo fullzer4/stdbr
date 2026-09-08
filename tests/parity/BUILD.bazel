@@ -52,12 +52,12 @@ sh_test(
     data = [
         ":gen_golden",
         "//bindings/nodejs:stdbr-node",
-        "//bindings/nodejs:test_parity.mjs",
+        "//bindings/nodejs:tests/parity.mjs",
     ],
     env = {
         "GOLDEN_JSON": "$(rootpath :gen_golden)",
         "STDBR_NODE": "$(rootpath //bindings/nodejs:stdbr-node)",
-        "STDBR_TEST_JS": "$(rootpath //bindings/nodejs:test_parity.mjs)",
+        "STDBR_TEST_JS": "$(rootpath //bindings/nodejs:tests/parity.mjs)",
     },
 )
 
@@ -81,12 +81,12 @@ sh_test(
     data = [
         ":gen_golden",
         "//bindings/python:stdbr-pymodule",
-        "//bindings/python:test_parity.py",
+        "//bindings/python:tests/parity.py",
     ],
     env = {
         "GOLDEN_JSON": "$(rootpath :gen_golden)",
         "STDBR_PYMODULE": "$(rootpath //bindings/python:stdbr-pymodule)",
-        "STDBR_TEST_PY": "$(rootpath //bindings/python:test_parity.py)",
+        "STDBR_TEST_PY": "$(rootpath //bindings/python:tests/parity.py)",
     },
 )
 
@@ -112,11 +112,11 @@ sh_test(
     data = [
         ":gen_golden",
         "//bindings/wasm:stdbr-wasm",
-        "//bindings/wasm:test_parity.js",
+        "//bindings/wasm:tests/parity.mjs",
     ],
     env = {
         "GOLDEN_JSON": "$(rootpath :gen_golden)",
         "WASM_PKG_FILES": "$(rootpaths //bindings/wasm:stdbr-wasm)",
-        "STDBR_TEST_JS": "$(rootpath //bindings/wasm:test_parity.js)",
+        "STDBR_TEST_JS": "$(rootpath //bindings/wasm:tests/parity.mjs)",
     },
 )

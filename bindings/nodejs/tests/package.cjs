@@ -4,7 +4,8 @@ const { tmpdir } = require("node:os");
 const { join } = require("node:path");
 const { spawnSync } = require("node:child_process");
 
-const packageName = require("./package.json").name;
+const packageDirectory = join(__dirname, "..");
+const packageName = require("../package.json").name;
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const temporaryDirectory = mkdtempSync(join(tmpdir(), "stdbr-nodejs-smoke-"));
 
@@ -30,7 +31,7 @@ try {
   const packOutput = run(
     npmCommand,
     ["pack", "--json", "--pack-destination", temporaryDirectory],
-    { cwd: __dirname },
+    { cwd: packageDirectory },
   );
   const [{ filename, files }] = JSON.parse(packOutput);
   const packedPaths = new Set(files.map(({ path }) => path));

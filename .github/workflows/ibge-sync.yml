@@ -59,7 +59,7 @@ jobs:
         id: drift
         if: github.event_name == 'schedule' && steps.fetch.outcome == 'success'
         run: |
-          if git diff --quiet -- core/src/municipio.rs tools/municipio_gen/ibge_municipios.json; then
+          if git diff --quiet -- core/src/municipio/generated.rs tools/municipio_gen/ibge_municipios.json; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             status=$?
@@ -79,9 +79,9 @@ jobs:
           body: |
             The scheduled sync detected municipality drift against the live IBGE API.
 
-            This PR updates the normalized source snapshot and the generated region in `core/src/municipio.rs`.
+            This PR updates the normalized source snapshot and `core/src/municipio/generated.rs`.
           branch: chore/ibge-sync
           labels: ibge-sync
           add-paths: |
-            core/src/municipio.rs
+            core/src/municipio/generated.rs
             tools/municipio_gen/ibge_municipios.json

@@ -56,7 +56,7 @@
     "build": "napi build --platform --release",
     "artifacts": "napi artifacts",
     "prepublishOnly": "napi prepublish --tagstyle npm --skip-gh-release",
-    "test:pack": "node smoke_test.js"
+    "test:pack": "node tests/package.cjs"
   },
   "optionalDependencies": {
     "@stdbr/stdbr-linux-x64-gnu": "0.3.1",

@@ -11,7 +11,7 @@ if _pymodule:
 import stdbr
 
 GOLDEN_PATH = os.environ.get("GOLDEN_JSON") or str(
-    Path(__file__).resolve().parent.parent.parent / "tests" / "parity" / "golden.json"
+    Path(__file__).resolve().parents[3] / "tests" / "parity" / "golden.json"
 )
 GOLDEN = json.loads(Path(GOLDEN_PATH).read_text())
 

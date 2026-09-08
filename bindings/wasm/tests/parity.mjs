@@ -5,10 +5,10 @@ import { describe, it } from "node:test";
 import { strictEqual, ok } from "node:assert";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const goldenPath = process.env.GOLDEN_JSON || join(__dirname, "../../tests/parity/golden.json");
+const goldenPath = process.env.GOLDEN_JSON || join(__dirname, "../../../tests/parity/golden.json");
 const golden = JSON.parse(readFileSync(goldenPath, "utf8"));
 
-const wasm = await import(process.env.WASM_PKG || join(__dirname, "pkg/stdbr_wasm.js"));
+const wasm = await import(process.env.WASM_PKG || join(__dirname, "../pkg/stdbr_wasm.js"));
 const {
   Cpf, cpfIsValid, cpfIsValidStrict, cpfFormat, cpfRemoveSymbols,
   cpfGenerate, cpfComputeCheckDigits,

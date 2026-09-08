@@ -25,7 +25,7 @@ rust_test(
     compile_data = [
         "ibge_municipios.json",
         "tests/ibge_api_fixture.json",
-        "//core:src/municipio.rs",
+        "//core:src/municipio/generated.rs",
     ],
     deps = [":municipio_gen_lib"],
 )

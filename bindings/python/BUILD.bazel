@@ -2,7 +2,7 @@ load("@rules_rust//rust:defs.bzl", "rust_shared_library")
 
 exports_files([
     "Cargo.toml",
-    "test_parity.py",
+    "tests/parity.py",
 ] + glob(["src/**/*.rs"]))
 
 rust_shared_library(

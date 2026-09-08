@@ -3,7 +3,7 @@ load("@rules_rust_wasm_bindgen//:defs.bzl", "rust_wasm_bindgen")
 
 exports_files([
     "Cargo.toml",
-    "test_parity.js",
+    "tests/parity.mjs",
 ] + glob(["src/**/*.rs"]))
 
 rust_shared_library(

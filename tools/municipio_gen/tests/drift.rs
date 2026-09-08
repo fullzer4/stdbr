@@ -3,7 +3,7 @@ use municipio_gen_lib::{has_drift, parse_and_normalize, render_source};
 #[test]
 fn checked_in_municipality_data_has_no_drift() {
     let source = include_str!("../ibge_municipios.json");
-    let target = include_str!("../../../core/src/municipio.rs");
+    let target = include_str!("../../../core/src/municipio/generated.rs");
     let normalized = parse_and_normalize(source).expect("snapshot must be valid");
     assert_eq!(
         render_source(&normalized).unwrap(),

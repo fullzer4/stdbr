@@ -19,7 +19,7 @@ fn run() -> Result<(), (u8, String)> {
         .map(PathBuf::from)
         .unwrap_or_else(|| env::current_dir().expect("cannot determine current directory"));
     let source = root.join("tools/municipio_gen/ibge_municipios.json");
-    let target = root.join("core/src/municipio.rs");
+    let target = root.join("core/src/municipio/generated.rs");
     let mut args = env::args().skip(1);
     let command = args.next().unwrap_or_else(|| "generate".to_owned());
 
