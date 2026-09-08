@@ -10,6 +10,7 @@ import tempfile
 
 kind, artifact_directory, *rest = sys.argv[1:]
 expected_version = rest[0] if rest else ""
+repository_root = Path(__file__).resolve().parents[3]
 artifacts = list(Path(artifact_directory).glob("*.whl" if kind == "wheel" else "*.tar.gz"))
 if len(artifacts) != 1:
     raise SystemExit(f"expected exactly one {kind} artifact, found {len(artifacts)}")
@@ -34,5 +35,29 @@ try:
         f"assert not {expected_version!r} or importlib.metadata.version('stdbr') == {expected_version!r}"
     )
     subprocess.run([str(python), "-c", check], check=True, cwd=temporary_directory, env=environment)
+    subprocess.run(
+        [str(python), str(repository_root / "bindings/python/tests/wheel.py")],
+        check=True,
+        cwd=temporary_directory,
+        env=environment,
+    )
+    subprocess.run(
+        [str(python), "-m", "pip", "install", "mypy==1.19.1"],
+        check=True,
+        cwd=temporary_directory,
+        env=environment,
+    )
+    subprocess.run(
+        [
+            str(python),
+            "-m",
+            "mypy",
+            "--strict",
+            str(repository_root / "bindings/python/tests/typing_smoke.py"),
+        ],
+        check=True,
+        cwd=temporary_directory,
+        env=environment,
+    )
 finally:
     shutil.rmtree(temporary_directory, ignore_errors=True)

@@ -76,7 +76,7 @@ jobs:
       - name: Install Rust
         run: rustup toolchain install stable --profile minimal
       - name: Consume the exact crate archives in a clean project
-        run: tests/package/smoke-crates.sh artifacts/crates "${{ inputs['expected-version'] }}"
+        run: tests/package/crates/smoke.sh artifacts/crates "${{ inputs['expected-version'] }}"
 
   build-node-native:
     runs-on: ${{ matrix.os }}
@@ -121,6 +121,10 @@ jobs:
         working-directory: bindings/nodejs
       - name: Build native package payload
         run: npx napi build --platform --release --target "${{ matrix.target }}"
+        working-directory: bindings/nodejs
+      - name: Check generated Node.js loader and declarations
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: git diff --exit-code -- index.js index.d.ts
         working-directory: bindings/nodejs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -186,7 +190,7 @@ jobs:
           name: release-node-packages
           path: artifacts/node
       - name: Install every exact tgz in a clean project and load the host binary
-        run: node tests/package/smoke-npm.mjs artifacts/node "${{ matrix.platform }}" "${{ inputs['expected-version'] }}"
+        run: node tests/package/node/smoke.mjs artifacts/node "${{ matrix.platform }}" "${{ inputs['expected-version'] }}"
 
   smoke-node-musl:
     needs: package-node
@@ -207,7 +211,7 @@ jobs:
           docker run --rm
           --volume "$PWD:/workspace:ro"
           node:20-alpine
-          node /workspace/tests/package/smoke-npm.mjs
+          node /workspace/tests/package/node/smoke.mjs
           /workspace/artifacts/node linux-x64-musl "$EXPECTED_VERSION"
 
   build-wasm:
@@ -251,7 +255,7 @@ jobs:
           name: release-wasm-package
           path: artifacts/wasm
       - name: Install and instantiate the exact web tgz in a clean project
-        run: node tests/package/smoke-wasm.mjs artifacts/wasm "${{ inputs['expected-version'] }}"
+        run: node tests/package/wasm/smoke.mjs artifacts/wasm "${{ inputs['expected-version'] }}"
 
   build-python-wheels:
     runs-on: ${{ matrix.os }}
@@ -334,7 +338,7 @@ jobs:
           name: release-python-wheel-${{ matrix.artifact }}
           path: artifacts/python
       - name: Install the exact wheel in a clean virtual environment
-        run: python tests/package/smoke-python.py wheel artifacts/python "${{ inputs['expected-version'] }}"
+        run: python tests/package/python/smoke.py wheel artifacts/python "${{ inputs['expected-version'] }}"
 
   smoke-python-sdist:
     needs: build-python-sdist
@@ -354,7 +358,7 @@ jobs:
           name: release-python-sdist
           path: artifacts/python
       - name: Build and install the exact sdist in a clean virtual environment
-        run: python tests/package/smoke-python.py sdist artifacts/python "${{ inputs['expected-version'] }}"
+        run: python tests/package/python/smoke.py sdist artifacts/python "${{ inputs['expected-version'] }}"
 
   build-ffi:
     runs-on: ${{ matrix.os }}
@@ -423,8 +427,8 @@ jobs:
       - name: Link and call the exact FFI archive on Unix
         if: matrix.shell == 'bash'
         shell: bash
-        run: tests/package/smoke-ffi.sh artifacts/ffi "${{ matrix.target }}"
+        run: tests/package/ffi/smoke.sh artifacts/ffi "${{ matrix.target }}"
       - name: Load and call the exact FFI archive on Windows
         if: matrix.shell == 'pwsh'
         shell: pwsh
-        run: tests/package/smoke-ffi.ps1 artifacts/ffi "${{ matrix.target }}"
+        run: tests/package/ffi/smoke.ps1 artifacts/ffi "${{ matrix.target }}"

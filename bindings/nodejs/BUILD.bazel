@@ -3,7 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_shared_library")
 
 exports_files([
     "Cargo.toml",
-    "test_parity.mjs",
+    "tests/parity.mjs",
 ] + glob(["src/**/*.rs"]))
 
 cargo_build_script(

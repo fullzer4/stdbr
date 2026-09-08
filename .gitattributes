@@ -1,0 +1,6 @@
+bindings/ffi-c/include/stdbr.h linguist-generated=true
+bindings/nodejs/index.js linguist-generated=true
+bindings/nodejs/index.d.ts linguist-generated=true
+bindings/python/python/stdbr/stdbr.pyi linguist-generated=true
+core/src/municipio/generated.rs linguist-generated=true
+tools/municipio_gen/ibge_municipios.json linguist-generated=true

@@ -79,6 +79,27 @@ jobs:
       - name: Run Rust quality gates
         run: nix develop --command tools/quality/quality.sh rust
 
+  node-generated:
+    name: Node.js generated files
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: cachix/install-nix-action@ba0dd844c9180cbf77aa72a116d6fbc515d0e87b # v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            max-jobs = 2
+            cores = 2
+      - name: Regenerate the NAPI-RS loader and declarations
+        working-directory: bindings/nodejs
+        run: nix develop ../.. --command npm ci
+      - name: Check generated files for drift
+        working-directory: bindings/nodejs
+        run: |
+          nix develop ../.. --command npm run build
+          git diff --exit-code -- index.js index.d.ts
+
   coverage:
     name: stdbr-core coverage
     runs-on: ubuntu-latest
