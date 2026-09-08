@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.2](https://github.com/fullzer4/stdbr/compare/v0.3.1...v0.3.2) (2026-09-08)
+
+
+### Bug Fixes
+
+* **ci:** restore required build and test check ([23afc3d](https://github.com/fullzer4/stdbr/commit/23afc3dcf8e68bc9f6f65ab20b567d8cacfca64e))
+* harden validation and release packaging ([202029e](https://github.com/fullzer4/stdbr/commit/202029e0267b4b451bba94a7e6054c8a8e55353c))
+* **release:** add timeout-minutes to all jobs and retry apt install ([4200922](https://github.com/fullzer4/stdbr/commit/4200922304bde7afd6e9c512ac4f10661ca9a7f5))
+
 ## [0.3.1](https://github.com/fullzer4/stdbr/compare/v0.3.0...v0.3.1) (2026-08-18)
 
 
