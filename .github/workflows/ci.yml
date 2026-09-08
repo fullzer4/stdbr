@@ -177,3 +177,54 @@ jobs:
             cores = 2
       - name: Check published Rust API compatibility
         run: nix develop --command tools/quality/quality.sh semver
+
+  required:
+    name: Build & Test
+    if: always()
+    needs:
+      - flake
+      - bazel
+      - rust
+      - node-generated
+      - coverage
+      - fuzz-build
+      - compatibility
+      - audit
+      - semver
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every quality gate
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          FLAKE_RESULT: ${{ needs.flake.result }}
+          BAZEL_RESULT: ${{ needs.bazel.result }}
+          RUST_RESULT: ${{ needs.rust.result }}
+          NODE_GENERATED_RESULT: ${{ needs['node-generated'].result }}
+          COVERAGE_RESULT: ${{ needs.coverage.result }}
+          FUZZ_RESULT: ${{ needs['fuzz-build'].result }}
+          COMPATIBILITY_RESULT: ${{ needs.compatibility.result }}
+          AUDIT_RESULT: ${{ needs.audit.result }}
+          SEMVER_RESULT: ${{ needs.semver.result }}
+        run: |
+          set -euo pipefail
+          for result in \
+            "$FLAKE_RESULT" \
+            "$BAZEL_RESULT" \
+            "$RUST_RESULT" \
+            "$NODE_GENERATED_RESULT" \
+            "$COVERAGE_RESULT" \
+            "$FUZZ_RESULT" \
+            "$COMPATIBILITY_RESULT" \
+            "$AUDIT_RESULT"; do
+            if [[ "$result" != success ]]; then
+              echo "required quality gate finished with: $result" >&2
+              exit 1
+            fi
+          done
+
+          if [[ "$SEMVER_RESULT" != success ]] && \
+            [[ ! ("$EVENT_NAME" == push && "$SEMVER_RESULT" == skipped) ]]; then
+            echo "semver gate finished with: $SEMVER_RESULT" >&2
+            exit 1
+          fi
