@@ -3,8 +3,6 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
-import { createRequire } from "node:module";
-import { pathToFileURL } from "node:url";
 
 const [artifactDirectory, hostPlatform, expectedVersion = ""] = process.argv.slice(2);
 if (!artifactDirectory || !hostPlatform) {
@@ -58,11 +56,24 @@ try {
     await readFile(join(packageDirectory, `stdbr.${platform}.node`));
   }
 
-  const require = createRequire(join(temporaryDirectory, "package.json"));
-  const stdbr = require("@stdbr/stdbr");
-  assert.equal(stdbr.cpfIsValid("52998224725"), true);
-  const esm = await import(pathToFileURL(join(temporaryDirectory, "node_modules", "@stdbr", "stdbr", "index.js")).href);
-  assert.equal(esm.cpfIsValid("52998224725"), true);
+  const probe = `
+    import { createRequire } from "node:module";
+    import { join } from "node:path";
+    import { pathToFileURL } from "node:url";
+    const installDirectory = process.argv[1];
+    const require = createRequire(join(installDirectory, "package.json"));
+    const stdbr = require("@stdbr/stdbr");
+    if (!stdbr.cpfIsValid("52998224725")) process.exit(1);
+    const esm = await import(pathToFileURL(join(installDirectory, "node_modules", "@stdbr", "stdbr", "index.js")).href);
+    if (!esm.cpfIsValid("52998224725")) process.exit(1);
+  `;
+  const probeResult = spawnSync(
+    process.execPath,
+    ["--input-type=module", "--eval", probe, temporaryDirectory],
+    { encoding: "utf8" },
+  );
+  if (probeResult.error) throw probeResult.error;
+  if (probeResult.status !== 0) throw new Error(`${probeResult.stdout}${probeResult.stderr}`);
   const libc = process.platform === "linux"
     ? process.report.getReport().header.glibcVersionRuntime ? "-gnu" : "-musl"
     : "";
