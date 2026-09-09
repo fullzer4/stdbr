@@ -224,10 +224,12 @@ jobs:
         with:
           node-version: 20
       - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # main
-      - name: Install wasm-pack
-        run: cargo binstall wasm-pack@0.13.1 --no-confirm
+      - name: Install WASM packaging tools
+        run: |
+          cargo binstall wasm-pack@0.13.1 --no-confirm
+          cargo binstall wasm-bindgen-cli@0.2.105 --no-confirm
       - name: Build the web target
-        run: wasm-pack build --release --target web --out-dir pkg
+        run: wasm-pack build --mode no-install --release --target web --out-dir pkg
         working-directory: bindings/wasm
       - name: Create the scoped npm tgz
         run: node tools/release/package-wasm.mjs bindings/wasm/pkg bindings/wasm/package.json artifacts/wasm
