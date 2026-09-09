@@ -278,7 +278,7 @@ jobs:
       - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
         with:
           command: build
-          maturin-version: v1.9.4
+          maturin-version: v1.12.6
           args: --release --out dist
           manylinux: auto
           working-directory: bindings/python
@@ -299,7 +299,7 @@ jobs:
       - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
         with:
           command: sdist
-          maturin-version: v1.9.4
+          maturin-version: v1.12.6
           args: --out dist
           working-directory: bindings/python
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
