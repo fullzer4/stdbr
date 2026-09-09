@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.6](https://github.com/fullzer4/stdbr/compare/v0.3.5...v0.3.6) (2026-09-09)
+
+
+### Bug Fixes
+
+* **release:** publish crates from tagged source ([#48](https://github.com/fullzer4/stdbr/issues/48)) ([b2efe4b](https://github.com/fullzer4/stdbr/commit/b2efe4bfc1f7a962286f65210747d8c834435be3))
+
 ## [0.3.5](https://github.com/fullzer4/stdbr/compare/v0.3.4...v0.3.5) (2026-09-09)
 
 
