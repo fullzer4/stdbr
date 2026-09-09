@@ -1,13 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-artifact_dir=${1:?crate artifact directory is required}
+artifact_dir=$(realpath "${1:?crate artifact directory is required}")
 version=${2:?release version is required}
-work_dir=$(mktemp -d)
-trap 'rm -rf "$work_dir"' EXIT
+source_dir=$(realpath "${3:?release source directory is required}")
+
+(
+  cd "$source_dir"
+  RUSTC_BOOTSTRAP=1 cargo -Z package-workspace package --locked --no-verify \
+    -p stdbr-core -p stdbr
+)
+
+for name in stdbr-core stdbr; do
+  cmp "$artifact_dir/$name-$version.crate" "$source_dir/target/package/$name-$version.crate"
+done
 
 publish_crate() {
   local name=$1
+  local manifest=$2
   local archive="$artifact_dir/$name-$version.crate"
   local status
 
@@ -21,14 +31,13 @@ publish_crate() {
     *) echo "crates.io returned HTTP $status for $name $version" >&2; exit 1 ;;
   esac
 
-  tar -xzf "$archive" -C "$work_dir"
-  cargo publish --no-verify --manifest-path "$work_dir/$name-$version/Cargo.toml"
+  cargo publish --locked --no-verify --manifest-path "$manifest"
 }
 
-publish_crate stdbr-core
+publish_crate stdbr-core "$source_dir/core/Cargo.toml"
 
 for attempt in {1..10}; do
-  if publish_crate stdbr; then
+  if publish_crate stdbr "$source_dir/Cargo.toml"; then
     exit 0
   fi
   if [[ $attempt -eq 10 ]]; then
