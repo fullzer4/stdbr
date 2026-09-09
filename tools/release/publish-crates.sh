@@ -13,6 +13,7 @@ publish_crate() {
 
   test -f "$archive"
   status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+    --user-agent "stdbr-release-workflow/$version (https://github.com/fullzer4/stdbr)" \
     "https://crates.io/api/v1/crates/$name/$version")
   case "$status" in
     200) echo "$name $version already exists on crates.io; skipping"; return ;;
