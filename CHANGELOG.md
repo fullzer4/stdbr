@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.5](https://github.com/fullzer4/stdbr/compare/v0.3.4...v0.3.5) (2026-09-09)
+
+
+### Bug Fixes
+
+* **release:** resume crates.io publication ([#46](https://github.com/fullzer4/stdbr/issues/46)) ([a84498f](https://github.com/fullzer4/stdbr/commit/a84498fe1c0f9ac8080ac6b3682cb01b68f188b3))
+
 ## [0.3.4](https://github.com/fullzer4/stdbr/compare/v0.3.3...v0.3.4) (2026-09-09)
 
 
