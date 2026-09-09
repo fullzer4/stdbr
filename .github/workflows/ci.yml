@@ -34,7 +34,7 @@ jobs:
             max-jobs = 2
             cores = 2
 
-      - uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
         with:
           name: nix-community
           skipPush: true
@@ -56,7 +56,7 @@ jobs:
             max-jobs = 2
             cores = 2
 
-      - uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
         with:
           name: nix-community
           skipPush: true
