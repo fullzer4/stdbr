@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.7](https://github.com/fullzer4/stdbr/compare/v0.3.6...v0.3.7) (2026-09-09)
+
+
+### Bug Fixes
+
+* **python:** correct package license metadata ([#50](https://github.com/fullzer4/stdbr/issues/50)) ([8c0aa75](https://github.com/fullzer4/stdbr/commit/8c0aa75ba0885031d1c113c077b5263cfbd7c56d))
+
 ## [0.3.6](https://github.com/fullzer4/stdbr/compare/v0.3.5...v0.3.6) (2026-09-09)
 
 
