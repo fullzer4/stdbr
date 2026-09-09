@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/fullzer4/stdbr/compare/v0.3.2...v0.3.3) (2026-09-09)
+
+
+### Bug Fixes
+
+* **release:** repair package smoke jobs ([254df3f](https://github.com/fullzer4/stdbr/commit/254df3f06085f8d3869dea4934654a4b6d31e22e))
+
 ## [0.3.2](https://github.com/fullzer4/stdbr/compare/v0.3.1...v0.3.2) (2026-09-08)
 
 
