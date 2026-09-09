@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.8](https://github.com/fullzer4/stdbr/compare/v0.3.7...v0.3.8) (2026-09-09)
+
+
+### Bug Fixes
+
+* **release:** pin wasm-bindgen CLI ([#52](https://github.com/fullzer4/stdbr/issues/52)) ([b90b9fa](https://github.com/fullzer4/stdbr/commit/b90b9fa512ff1b6a6f8b075da6f4f99fab2e82a9))
+
 ## [0.3.7](https://github.com/fullzer4/stdbr/compare/v0.3.6...v0.3.7) (2026-09-09)
 
 
