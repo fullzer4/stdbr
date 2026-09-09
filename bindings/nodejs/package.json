@@ -1,6 +1,6 @@
 {
   "name": "@stdbr/stdbr",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "description": "Standard library for Brazil",
   "type": "commonjs",
   "main": "index.js",
