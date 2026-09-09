@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.9](https://github.com/fullzer4/stdbr/compare/v0.3.8...v0.3.9) (2026-09-09)
+
+
+### Bug Fixes
+
+* **release:** validate Node 24 pipeline ([#56](https://github.com/fullzer4/stdbr/issues/56)) ([f6f86e2](https://github.com/fullzer4/stdbr/commit/f6f86e2e1c031f3b496c822aefbb59ac8c3b7696))
+
 ## [0.3.8](https://github.com/fullzer4/stdbr/compare/v0.3.7...v0.3.8) (2026-09-09)
 
 
