@@ -110,9 +110,17 @@ jobs:
           rustup toolchain install 1.87.0 --profile minimal --target "${{ matrix.target }}"
       - name: Install Zig
         if: matrix.target == 'aarch64-unknown-linux-gnu' || contains(matrix.target, 'musl')
-        uses: goto-bus-stop/setup-zig@abea47f85e598557f500fa1fd2ab7464fcb39406 # v2.2.1
-        with:
-          version: 0.13.0
+        shell: bash
+        run: |
+          archive="$RUNNER_TEMP/zig-linux-x86_64-0.13.0.tar.xz"
+          curl --fail --location --retry 5 --show-error --silent \
+            --output "$archive" \
+            https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz
+          printf '%s  %s\n' \
+            d45312e61ebcc48032b77bc4cf7fd6915c11fa16e4aad116b66c9468211230ea \
+            "$archive" | sha256sum --check
+          tar --extract --file "$archive" --directory "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/zig-linux-x86_64-0.13.0" >> "$GITHUB_PATH"
       - name: Install musl tools
         if: contains(matrix.target, 'musl')
         run: sudo apt-get update && sudo apt-get install -y musl-tools musl-dev
