@@ -20,17 +20,22 @@ try {
     }
 
     $env:PATH = "$packageDirectory;$env:PATH"
-    Add-Type @'
+    $probe = @'
+Add-Type @"
 using System.Runtime.InteropServices;
 public static class StdbrFfi {
     [DllImport("stdbr_ffi.dll", CallingConvention = CallingConvention.Cdecl)]
     [return: MarshalAs(UnmanagedType.I1)]
     public static extern bool stdbr_cpf_is_valid([MarshalAs(UnmanagedType.LPStr)] string value);
 }
+"@
+if (-not [StdbrFfi]::stdbr_cpf_is_valid("52998224725")) {
+    throw "stdbr_cpf_is_valid rejected a valid CPF"
+}
 '@
-    if (-not [StdbrFfi]::stdbr_cpf_is_valid("52998224725")) {
-        throw "stdbr_cpf_is_valid rejected a valid CPF"
-    }
+    $encodedProbe = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($probe))
+    pwsh -NoLogo -NoProfile -NonInteractive -EncodedCommand $encodedProbe
+    if ($LASTEXITCODE -ne 0) { throw "FFI probe failed" }
 } finally {
     Remove-Item -Recurse -Force $temporaryDirectory
 }
