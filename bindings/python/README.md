@@ -7,4 +7,4 @@ This package exposes Rust-powered helpers for Brazilian identifiers and data
 
 ## License
 
-MIT OR Apache-2.0
+Apache-2.0
