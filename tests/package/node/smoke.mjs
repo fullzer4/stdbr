@@ -36,8 +36,10 @@ try {
       cwd: temporaryDirectory,
       encoding: "utf8",
       env: { ...process.env, npm_config_cache: join(temporaryDirectory, ".npm-cache") },
+      shell: process.platform === "win32",
     },
   );
+  if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`${result.stdout}${result.stderr}`);
 
   const mainManifest = JSON.parse(
