@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.4](https://github.com/fullzer4/stdbr/compare/v0.3.3...v0.3.4) (2026-09-09)
+
+
+### Bug Fixes
+
+* **release:** complete package smoke recovery ([#44](https://github.com/fullzer4/stdbr/issues/44)) ([662de77](https://github.com/fullzer4/stdbr/commit/662de779c1dd8630d9b8568134d1550153c0263d))
+
 ## [0.3.3](https://github.com/fullzer4/stdbr/compare/v0.3.2...v0.3.3) (2026-09-09)
 
 
